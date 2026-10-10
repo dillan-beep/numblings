@@ -178,7 +178,7 @@ L[3] = () => pick([
     };
   },
   () => {
-    const p = pick([4, 5, 6, 8, 10]), s = randInt(2, p - 1);
+    const p = pick([4, 5, 6, 8, 10]), s = randInt(3, p - 1);
     return {
       prompt: `Count by ${PL[p]}: ${raw(s - 2, p)}, ${raw(s - 1, p)}, ?`,
       answer: raw(s, p),
@@ -203,7 +203,7 @@ L[4] = () => pick([
     return {
       prompt: 'What fraction is at the dot?',
       answer: raw(n, d), choices: choices(raw(n, d), [raw(n, d - 1), raw(n, d + 1), raw(n + 1, d)]),
-      visual: { type: 'numberline', min: 0, max: 1, step: 1 / d, highlight: n / d },
+      visual: { type: 'numberline', min: 0, max: 1, step: 1 / d, labels: 'fraction', den: d, highlight: n / d },
       hint: `Count the spaces between 0 and 1, not the tick marks.`,
       explain: `The line from 0 to 1 is cut into ${d} equal spaces. The dot is ${n} spaces along, so it is ${n}/${d}.`,
       wrongTags: { [raw(n, d - 1)]: 'count-ticks-not-spaces', [raw(n, d + 1)]: 'count-ticks-not-spaces' },
@@ -214,8 +214,8 @@ L[4] = () => pick([
     return {
       prompt: `Tap ${n}/${d} on the number line.`,
       answer: num(n / d), input: 'visual',
-      visual: { type: 'numberline', min: 0, max: 1, step: 1 / d, question: 'point' },
-      explain: `The line is cut into ${d} equal spaces. ${n}/${d} is ${n} spaces from 0.`,
+      visual: { type: 'numberline', min: 0, max: 1, step: 1 / d, labels: 'fraction', den: d, question: 'point' },
+      explain: `The line is cut into ${d} equal spaces. ${n}/${d} is ${n} space${n === 1 ? '' : 's'} from 0.`,
     };
   },
   () => {
@@ -265,7 +265,7 @@ L[4] = () => pick([
     return {
       prompt: 'What number is at the dot?',
       answer: mixed(d + n, d), choices: choices(mixed(d + n, d), [raw(n, d), mixed(d + n + 1, d), `${d + n}`]),
-      visual: { type: 'numberline', min: 0, max: 2, step: 1 / d, highlight: val },
+      visual: { type: 'numberline', min: 0, max: 2, step: 1 / d, labels: 'fraction', den: d, highlight: val },
       explain: `The dot is past 1 by ${n}/${d}, so it is ${mixed(d + n, d)}.`,
     };
   },
@@ -322,12 +322,14 @@ L[5] = () => pick([
       prompt: `Which is bigger: ${n}/${x} or ${n}/${y}?`,
       answer: raw(n, a), choices: [raw(n, x), raw(n, y)],
       visual: { type: 'fractionbar', bars: [{ parts: x, shaded: n }, { parts: y, shaded: n }] },
-      explain: `Same number of pieces, but ${ORD[a] || 'pieces of 1/' + a} are bigger than 1/${b}, so ${n}/${a} is bigger.`,
+      explain: `Same number of pieces, but 1/${a} pieces are bigger than 1/${b} pieces, so ${n}/${a} is bigger.`,
       wrongTags: { [raw(n, b)]: 'bigger-denominator-bigger' },
     };
   },
   () => {
-    const d = randInt(2, 6), w = randInt(1, 3), r = randInt(1, d - 1), n = w * d + r;
+    const d = randInt(2, 6), w = randInt(1, 3);
+    let r; do { r = randInt(1, d - 1); } while (gcd(r, d) !== 1); // so the mixed number needs no extra simplifying
+    const n = w * d + r;
     const ans = mixed(n, d);
     return {
       prompt: `Write ${n}/${d} as a mixed number.`,
@@ -378,7 +380,7 @@ L[6] = () => pick([
       answer: fr(a - b, d),
       visual: { type: 'fractionbar', bars: [{ parts: d, shaded: a }, { parts: d, shaded: b }] },
       hint: 'Subtract the tops, keep the bottom.',
-      explain: `${a} − ${b} = ${a - b} pieces of size 1/${d}, so ${a - b}/${d}${fr(a - b, d) !== raw(a - b, d) ? ' = ' + fr(a - b, d) : ''}.`,
+      explain: `${a} − ${b} = ${a - b} piece${a - b === 1 ? '' : 's'} of size 1/${d}, so ${a - b}/${d}${fr(a - b, d) !== raw(a - b, d) ? ' = ' + fr(a - b, d) : ''}.`,
     };
   },
   () => {
@@ -386,7 +388,7 @@ L[6] = () => pick([
     const ans = raw(n, d);
     return {
       prompt: `Write ${n * k}/${d * k} in simplest form.`,
-      answer: ans, choices: choices(ans, [raw(n * k, d * k), raw(n, d * k), raw(n * k, d * k + 1), raw(n * 2, d * 2)]),
+      answer: ans, choices: choices(ans, [raw(n * k, d * k), raw(n, d * k), raw(n * k, d * k + 1)]),
       hint: `What number divides into both ${n * k} and ${d * k}?`,
       explain: `Divide top and bottom by ${k}: ${n * k}/${d * k} = ${ans}.`,
       wrongTags: { [raw(n * k, d * k)]: 'not-simplified' },
@@ -398,8 +400,8 @@ L[6] = () => pick([
       prompt: `What is ${n}/${d} of ${q}?`,
       answer: String(n * m),
       visual: { type: 'fractionbar', parts: d, shaded: n },
-      hint: `First find 1/${d} of ${q}, then multiply by ${n}.`,
-      explain: `${q} ÷ ${d} = ${m}, and ${n} × ${m} = ${n * m}. So ${n}/${d} of ${q} is ${n * m}.`,
+      hint: n === 1 ? `Split ${q} into ${d} equal groups.` : `First find 1/${d} of ${q}, then multiply by ${n}.`,
+      explain: n === 1 ? `${q} ÷ ${d} = ${m}. So 1/${d} of ${q} is ${m}.` : `${q} ÷ ${d} = ${m}, and ${n} × ${m} = ${n * m}. So ${n}/${d} of ${q} is ${n * m}.`,
     };
   },
 ])();
@@ -463,7 +465,7 @@ L[7] = () => pick([
     return {
       prompt: `Is ${n}/${d} more or less than 1/2?`,
       answer: more ? 'more' : 'less', choices: ['more', 'less'],
-      visual: { type: 'numberline', min: 0, max: 1, step: 1 / d, highlight: n / d },
+      visual: { type: 'numberline', min: 0, max: 1, step: 1 / d, labels: 'fraction', den: d, highlight: n / d },
       hint: `Half of ${d} is ${d / 2}.`,
       explain: `Half of ${d} is ${d / 2}. ${n} is ${more ? 'more' : 'less'} than ${d / 2}, so ${n}/${d} is ${more ? 'more' : 'less'} than 1/2.`,
     };
@@ -547,7 +549,7 @@ L[8] = () => pick([
       prompt: `${w1} ${r1}/${d} − ${w2} ${r2}/${d} = ?`,
       answer: ans, choices: choices(ans, [`${w1 - w2} ${r2 - r1}/${d}`, mixed(total + d, d), mixed(total - 1, d)]),
       hint: `Borrow 1 whole as ${d}/${d} before subtracting the fractions.`,
-      explain: `Rewrite ${w1} ${r1}/${d} as ${w1 - 1} ${r1 + d}/${d}. Then ${w1 - 1} − ${w2} = ${w1 - 1 - w2} and ${r1 + d}/${d} − ${r2}/${d} = ${r1 + d - r2}/${d}. Answer: ${ans}.`,
+      explain: `Rewrite ${w1} ${r1}/${d} as ${w1 - 1} ${r1 + d}/${d}. Then ${w1 - 1} − ${w2} = ${w1 - 1 - w2} and ${r1 + d}/${d} − ${r2}/${d} = ${r1 + d - r2}/${d}${fr(r1 + d - r2, d) !== raw(r1 + d - r2, d) ? ' = ' + fr(r1 + d - r2, d) : ''}. Answer: ${ans}.`,
       wrongTags: { [`${w1 - w2} ${r2 - r1}/${d}`]: 'smaller-from-larger' },
     };
   },
@@ -558,7 +560,7 @@ const CONV = [[1, 2, '0.5', 50], [1, 4, '0.25', 25], [3, 4, '0.75', 75], [1, 5, 
 L[9] = () => pick([
   () => {
     const d2 = pick([2, 3, 4, 5, 6, 8, 10]), d1 = pick([2, 3, 4, 5]);
-    const a = randInt(1, d1 - 1);
+    let a; do { a = randInt(1, d1 - 1); } while (gcd(a, d1) !== 1); // no "2/4" in the prompt
     const n = a * d2, d = d1;
     return {
       prompt: `${a}/${d1} ÷ 1/${d2} = ?`,
@@ -644,7 +646,7 @@ L[10] = () => pick([
     const askFirst = Math.random() < 0.5;
     const ans = askFirst ? a * k : b * k;
     return {
-      prompt: `${p} to ${q} is ${a}:${b}. There are ${total} in all. How many ${askFirst ? p : q}?`,
+      prompt: `The ratio of ${p} to ${q} is ${a}:${b}. There are ${total} in all. How many ${askFirst ? p : q}?`,
       answer: String(ans),
       hint: `${a} + ${b} = ${a + b} parts in total. How big is one part?`,
       explain: `${a + b} parts make ${total}, so one part is ${k}. ${askFirst ? a : b} parts is ${askFirst ? a : b} × ${k} = ${ans}.`,
@@ -655,7 +657,7 @@ L[10] = () => pick([
     const [p, q] = pick(PAIRS);
     const ans = a * k;
     return {
-      prompt: `${p} to ${q} is ${a}:${b}. ${total} in all. How many ${p}?`,
+      prompt: `The ratio of ${p} to ${q} is ${a}:${b}. There are ${total} in all. How many ${p}?`,
       answer: String(ans), choices: choices(ans, [(total * a) / b, total - a, a * b]),
       explain: `${a}:${b} means ${a} parts out of ${a + b} parts. ${total} ÷ ${a + b} = ${k} per part, so ${a} × ${k} = ${ans}.`,
       wrongTags: { [(total * a) / b]: 'ratio-as-fraction-of-total' },
@@ -680,7 +682,7 @@ L[10] = () => pick([
     return {
       prompt: `−${a}/${d1} + ${b}/${d2} = ?`,
       answer: ans,
-      visual: { type: 'numberline', min: -1, max: 1, step: 1 / l, highlight: n / l },
+      visual: { type: 'numberline', min: -1, max: 1, step: 1 / l, labels: 'fraction', den: l, highlight: n / l },
       hint: `Change both to ${l}ths. Start at −${a * (l / d1)}/${l} and move right ${b * (l / d2)}/${l}.`,
       explain: `−${a * (l / d1)}/${l} + ${b * (l / d2)}/${l} = ${n}/${l}${ans !== raw(n, l) ? ' = ' + ans : ''}.`,
     };
@@ -720,7 +722,7 @@ L[10] = () => pick([
   () => {
     const [n, d] = pick([[2, 3], [3, 4], [3, 5], [5, 6], [2, 5]]), k = randInt(2, 9);
     return {
-      prompt: `A recipe needs ${n}/${d} cup of flour per batch. How many cups for ${k} batches?`,
+      prompt: `A recipe needs ${n}/${d} cup of flour per batch. How many cups for ${k} batches? (a fraction is fine)`,
       answer: fr(n * k, d),
       explain: `${n}/${d} × ${k} = ${n * k}/${d}${fr(n * k, d) !== raw(n * k, d) ? ' = ' + fr(n * k, d) : ''} cups.`,
     };

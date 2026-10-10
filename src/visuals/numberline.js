@@ -22,6 +22,18 @@ function layout(spec) {
   return { min, max, step, ticks };
 }
 
+// Tick labels. With labels: 'fraction' (and optional den), fractional ticks read as k/den instead of 0.333333.
+function labelFor(v, spec) {
+  if (spec.labels !== 'fraction') return fmt(v);
+  const step = Number(spec.step) > 0 ? Number(spec.step) : 1;
+  const den = Number(spec.den) > 0 ? Math.round(Number(spec.den)) : Math.max(1, Math.round(1 / step));
+  const k = Math.round(v * den);
+  if (Math.abs(k / den - v) > 1e-6) return fmt(v);
+  if (k % den === 0) return String(k / den);
+  if (spec.mixed && Math.abs(k) > den) { const w = Math.trunc(k / den); return `${w} ${Math.abs(k) - Math.abs(w) * den}/${den}`; }
+  return `${k}/${den}`;
+}
+
 export function renderWith(spec, state) {
   const { ticks } = layout(spec);
   const n = ticks.length;
@@ -45,7 +57,7 @@ export function renderWith(spec, state) {
     if (i === n - 1 && !labelled && t.x - ticks[lastLabelled].x >= 24) labelled = true;
     const th = labelled ? 12 : 7;
     inner += line(t.x, Y - th, t.x, Y + th, C.dark, labelled ? 3 : 2);
-    if (labelled) inner += text(t.x, Y + 28, fmt(t.v), { size: fontSize });
+    if (labelled) inner += text(t.x, Y + 28, labelFor(t.v, spec), { size: spec.labels === 'fraction' ? Math.min(fontSize, 15) : fontSize });
   });
 
   // marks: small orange arrows pointing down at the value

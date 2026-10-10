@@ -3,6 +3,9 @@ import { randInt, pick, shuffle } from '../rng.js';
 
 const num = (x) => String(Math.round(x * 1000) / 1000);
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const an = (s) => (/^[aeiou]/i.test(s) ? `an ${s}` : `a ${s}`);
+// "a 11 × 6" reads as "an eleven"; pick the article by sound.
+const artNum = (n) => (n === 8 || n === 11 || n === 18 || (n >= 80 && n <= 89) ? 'an' : 'a');
 function mc(answer, wrong, n = 4) {
   const out = [String(answer)];
   for (const w of wrong) { const s = String(w); if (!out.includes(s) && out.length < n) out.push(s); }
@@ -15,15 +18,16 @@ const HEAVIER = [['elephant', 'mouse'], ['rock', 'feather'], ['car', 'apple'], [
 const HOLDS = [['bathtub', 'cup'], ['swimming pool', 'bucket'], ['jug', 'spoon'], ['bucket', 'glass'], ['barrel', 'bottle']];
 const L1 = [
   () => { const [a, b] = pick(LONGER); const shorter = Math.random() < 0.4; const ans = shorter ? b : a;
-    return { prompt: `Which is ${shorter ? 'shorter' : 'longer'}: a ${a} or a ${b}?`, answer: ans, choices: shuffle([a, b]), explain: `A ${a} is much longer than a ${b}, so the ${ans} is ${shorter ? 'shorter' : 'longer'}.` }; },
+    return { prompt: `Which is ${shorter ? 'shorter' : 'longer'}: ${an(a)} or ${an(b)}?`, answer: ans, choices: shuffle([a, b]), explain: `${cap(an(a))} is much longer than ${an(b)}, so the ${ans} is ${shorter ? 'shorter' : 'longer'}.` }; },
   () => { const [a, b] = pick(HEAVIER); const lighter = Math.random() < 0.4; const ans = lighter ? b : a;
-    return { prompt: `Which is ${lighter ? 'lighter' : 'heavier'}: a ${a} or a ${b}?`, answer: ans, choices: shuffle([a, b]), explain: `A ${a} weighs much more than a ${b}, so the ${ans} is ${lighter ? 'lighter' : 'heavier'}.` }; },
+    return { prompt: `Which is ${lighter ? 'lighter' : 'heavier'}: ${an(a)} or ${an(b)}?`, answer: ans, choices: shuffle([a, b]), explain: `${cap(an(a))} weighs much more than ${an(b)}, so the ${ans} is ${lighter ? 'lighter' : 'heavier'}.` }; },
   () => { const [a, b] = pick(HOLDS); const less = Math.random() < 0.4; const ans = less ? b : a;
-    return { prompt: `Which holds ${less ? 'less' : 'more'} water: a ${a} or a ${b}?`, answer: ans, choices: shuffle([a, b]), explain: `A ${a} is much bigger inside than a ${b}, so the ${ans} holds ${less ? 'less' : 'more'}.` }; },
+    return { prompt: `Which holds ${less ? 'less' : 'more'} water: ${an(a)} or ${an(b)}?`, answer: ans, choices: shuffle([a, b]), explain: `${cap(an(a))} is much bigger inside than ${an(b)}, so the ${ans} holds ${less ? 'less' : 'more'}.` }; },
   () => { const big = randInt(3, 6), small = randInt(1, big - 1); const leftBig = Math.random() < 0.5;
-    const left = [`${leftBig ? big : small} blocks`], right = [`${leftBig ? small : big} blocks`];
-    return { prompt: 'Which side of the scale is heavier?', answer: leftBig ? 'Left' : 'Right', choices: ['Left', 'Right'], visual: { type: 'balance', left, right },
-      hint: 'The heavier side goes down.', explain: `${big} blocks weigh more than ${small} blocks, so the ${leftBig ? 'left' : 'right'} side is heavier.` }; },
+    // One numeric block per unit so the balance visual actually tilts toward the heavier pan.
+    const left = Array(leftBig ? big : small).fill('1'), right = Array(leftBig ? small : big).fill('1');
+    return { prompt: 'Each block weighs the same. Which side of the scale is heavier?', answer: leftBig ? 'Left' : 'Right', choices: ['Left', 'Right'], visual: { type: 'balance', left, right },
+      hint: 'The heavier side goes down.', explain: `${big} blocks weigh more than ${small} ${small === 1 ? 'block' : 'blocks'}, so the ${leftBig ? 'left' : 'right'} side is heavier.` }; },
   () => { const a = randInt(3, 9), b = randInt(3, 9); if (a === b) return L1[0]();
     return { prompt: `A red ribbon is ${a} hands long. A blue ribbon is ${b} hands long. Which is longer?`, answer: a > b ? 'red' : 'blue', choices: shuffle(['red', 'blue']),
       explain: `${Math.max(a, b)} hands is more than ${Math.min(a, b)} hands, so the ${a > b ? 'red' : 'blue'} ribbon is longer.` }; },
@@ -33,10 +37,10 @@ const L1 = [
 const ESTIMATES = [['a pencil', 5, 'paperclips'], ['a book', 8, 'paperclips'], ['a bed', 60, 'paperclips'], ['a door', 70, 'paperclips'], ['a spoon', 3, 'cubes'], ['a table', 40, 'cubes']];
 const L2 = [
   () => { const n = randInt(2, 12);
-    return { prompt: 'Each mark on the ruler is 1 cube. How many cubes long is the bar?', answer: String(n), visual: { type: 'ruler', length: n, unit: 'cm', max: 12 },
-      hint: 'Count the spaces, not the lines.', explain: `Count the spaces from 0 to the end of the bar: ${n} cubes.` }; },
+    return { prompt: 'Each space on the ruler is 1 cube. How many cubes long is the pencil?', answer: String(n), visual: { type: 'ruler', length: n, unit: 'cm', max: 12 },
+      hint: 'Count the spaces, not the lines.', explain: `Count the spaces from 0 to the end of the pencil: ${n} cubes.` }; },
   () => { const a = randInt(5, 12), b = randInt(2, a - 1);
-    return { prompt: `A pencil is ${a} cubes long. A crayon is ${b} cubes long. How many cubes longer is the pencil?`, answer: String(a - b), explain: `${a} − ${b} = ${a - b} cubes longer.` }; },
+    return { prompt: `A pencil is ${a} cubes long. A crayon is ${b} cubes long. How many cubes longer is the pencil?`, answer: String(a - b), explain: `${a} − ${b} = ${a - b} ${a - b === 1 ? 'cube' : 'cubes'} longer.` }; },
   () => { const [item, n, unit] = pick(ESTIMATES);
     return { prompt: `About how many ${unit} long is ${item}?`, answer: String(n), choices: mc(n, [n * 10, n * 100, Math.max(1, Math.round(n / 10))], 3),
       explain: `${cap(item)} is about ${n} ${unit} long. ${n * 10} would be far too many.` }; },
@@ -54,7 +58,7 @@ const UNIT_CHOICE = [['a car', 'm'], ['a pencil', 'cm'], ['a classroom', 'm'], [
 const BENCH = [['About how wide is your finger?', '1 cm', ['10 cm', '1 m']], ['About how tall is a door?', '2 m', ['20 cm', '20 m']], ['About how long is a new pencil?', '15 cm', ['15 m', '1 cm']], ['About how tall is a grade 3 child?', '130 cm', ['13 cm', '13 m']], ['About how long is a bed?', '2 m', ['2 cm', '20 m']]];
 const L3 = [
   () => { const n = randInt(1, 15);
-    return { prompt: 'How long is the bar in centimetres?', answer: String(n), visual: { type: 'ruler', length: n, unit: 'cm', max: 15 }, hint: 'Start reading from 0.', explain: `Read from 0 to the end of the bar: ${n} cm.` }; },
+    return { prompt: 'How long is the pencil in centimetres?', answer: String(n), visual: { type: 'ruler', length: n, unit: 'cm', max: 15 }, hint: 'Start reading from 0.', explain: `Read from 0 to the end of the pencil: ${n} cm.` }; },
   () => { const [item, u] = pick(UNIT_CHOICE);
     return { prompt: `Would you measure ${item} in cm or m?`, answer: u, choices: ['cm', 'm'], explain: u === 'm' ? `${cap(item)} is big, so metres fit best.` : `${cap(item)} is small, so centimetres fit best.` }; },
   () => { const [q, a, w] = pick(BENCH); return { prompt: q, answer: a, choices: mc(a, w, 3), explain: `${a} is the sensible estimate.` }; },
@@ -103,7 +107,7 @@ const POLY = [['triangle', 3], ['square', 4], ['pentagon', 5], ['hexagon', 6], [
 const L6 = [
   () => { const w = randInt(2, 9), h = randInt(2, 9); return { prompt: `What is the perimeter of this ${w} cm × ${h} cm rectangle?`, answer: String(2 * (w + h)), visual: { type: 'area', w, h }, hint: 'Add all four sides.', explain: `${w} + ${h} + ${w} + ${h} = ${2 * (w + h)} cm.` }; },
   () => { const s = randInt(3, 12); return { prompt: `A square has sides of ${s} cm. What is its perimeter?`, answer: String(4 * s), explain: `4 × ${s} = ${4 * s} cm.` }; },
-  () => { const [name, n] = pick(POLY); const s = randInt(3, 12); return { prompt: `A regular ${name} has sides of ${s} cm. What is its perimeter?`, answer: String(n * s), explain: `A regular ${name} has ${n} equal sides: ${n} × ${s} = ${n * s} cm.` }; },
+  () => { const [name, n] = pick(POLY); const s = randInt(3, 12); const reg = name === 'square' ? '' : 'regular '; return { prompt: `A ${reg}${name} has sides of ${s} cm. What is its perimeter?`, answer: String(n * s), explain: `A ${reg}${name} has ${n} equal sides: ${n} × ${s} = ${n * s} cm.` }; },
   () => { const a = randInt(1, 4), b = randInt(1, 11) * 5, c = randInt(1, 4), d = randInt(1, 11) * 5; const t = (a + c) * 100 + b + d;
     return { prompt: `${a} m ${b} cm + ${c} m ${d} cm = __ cm`, answer: String(t), explain: `${a} m ${b} cm = ${a * 100 + b} cm and ${c} m ${d} cm = ${c * 100 + d} cm. ${a * 100 + b} + ${c * 100 + d} = ${t} cm.` }; },
   () => { const w = randInt(2, 8), l = randInt(w + 1, 15); const p = 2 * (w + l);
@@ -141,8 +145,8 @@ const L8 = [
   () => { const b = randInt(3, 12), h = randInt(2, 9), s = h + randInt(1, 3);
     return { prompt: `A parallelogram has base ${b} cm, height ${h} cm, and side ${s} cm. Area in cm²?`, answer: String(b * h), choices: mc(b * h, [b * s, 2 * (b + s), b * h / 2]), wrongTags: { [b * s]: 'slant-as-height' }, explain: `Area = base × height = ${b} × ${h} = ${b * h} cm².` }; },
   () => { const W = randInt(6, 12), H = randInt(5, 10), w = randInt(2, W - 2), h = randInt(2, H - 2);
-    return { prompt: `An L-shape is a ${W} × ${H} rectangle with a ${w} × ${h} corner cut out. What is its area?`, answer: String(W * H - w * h), hint: 'Big rectangle minus the missing piece.', explain: `${W} × ${H} = ${W * H}, minus ${w} × ${h} = ${w * h}, gives ${W * H - w * h}.` }; },
-  () => { const a = randInt(2, 8), b = randInt(3, 9), c = randInt(2, 5), d = randInt(2, 6); return { prompt: `A shape is made of a ${a} × ${b} rectangle joined to a ${c} × ${d} rectangle. Total area?`, answer: String(a * b + c * d), explain: `${a * b} + ${c * d} = ${a * b + c * d} square units.` }; },
+    return { prompt: `An L-shape is ${artNum(W)} ${W} × ${H} rectangle with ${artNum(w)} ${w} × ${h} corner cut out. What is its area?`, answer: String(W * H - w * h), hint: 'Big rectangle minus the missing piece.', explain: `${W} × ${H} = ${W * H}, minus ${w} × ${h} = ${w * h}, gives ${W * H - w * h}.` }; },
+  () => { const a = randInt(2, 8), b = randInt(3, 9), c = randInt(2, 5), d = randInt(2, 6); return { prompt: `A shape is made of ${artNum(a)} ${a} × ${b} rectangle joined to ${artNum(c)} ${c} × ${d} rectangle. Total area?`, answer: String(a * b + c * d), explain: `${a * b} + ${c * d} = ${a * b + c * d} square units.` }; },
   () => { const [q, a, w] = pick(US); return { prompt: q, answer: a, choices: mc(a, w), explain: `In US units, ${q.replace(' __', ` ${a}`)}.` }; },
   () => pick([() => { const f = randInt(2, 6); return { prompt: `${f} feet = __ inches`, answer: String(f * 12), explain: `${f} × 12 = ${f * 12} inches.` }; },
     () => { const p = randInt(2, 5); return { prompt: `${p} pounds = __ ounces`, answer: String(p * 16), explain: `${p} × 16 = ${p * 16} ounces.` }; },

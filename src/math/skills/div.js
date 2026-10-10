@@ -113,7 +113,9 @@ function L2() {
 }
 
 function L3() {
-  const d = pick([2, 5, 10]), q = randInt(2, 10), total = d * q;
+  const d = pick([2, 5, 10]);
+  let q; do { q = randInt(2, 10); } while (q === d); // avoid "If 2 x 2 = 4, what is 4 ÷ 2?"
+  const total = d * q;
   const t = randInt(0, 4);
   if (t === 0) return {
     prompt: `${total} ÷ ${d} = ?`, answer: String(q),
@@ -193,7 +195,7 @@ function L4() {
 }
 
 function L5() {
-  const d = randInt(3, 9), q = randInt(3, Math.floor(99 / d)), r = randInt(1, d - 1), total = d * q + r;
+  const d = randInt(3, 9), r = randInt(1, d - 1), q = randInt(3, Math.floor((100 - r) / d)), total = d * q + r; // total <= 100
   const t = randInt(0, 4);
   const strat = `${d} x ${q} = ${d * q}, and ${total} - ${d * q} = ${r}`;
   if (t === 0) return {
@@ -215,16 +217,17 @@ function L5() {
     explain: `${strat}. So ${q} whole groups with ${r} left over.`,
   };
   const thing = pick(['pencils', 'eggs', 'muffins', 'stickers']);
+  const Thing = thing[0].toUpperCase() + thing.slice(1);
   if (t === 3) return {
-    prompt: `${thing} come in packs of ${d}. ${total} ${thing} make how many full packs?`, answer: String(q),
+    prompt: `${Thing} come in packs of ${d}. ${total} ${thing} make how many full packs?`, answer: String(q),
     hint: 'Full packs only; the leftovers do not count.',
     explain: `${strat}. ${q} full packs and ${r} left over.`,
     wrongTags: { [q + 1]: 'rounded-up-remainder' },
   };
   return {
-    prompt: `${thing} come in packs of ${d}. With ${total} ${thing}, how many are left over?`, answer: String(r),
+    prompt: `${Thing} come in packs of ${d}. With ${total} ${thing}, how many are left over?`, answer: String(r),
     hint: `${q} full packs use ${d * q}.`,
-    explain: `${strat}. ${r} are left over.`,
+    explain: `${strat}. ${r} ${r === 1 ? 'is' : 'are'} left over.`,
   };
 }
 
@@ -232,14 +235,16 @@ function L6() {
   const t = randInt(0, 4);
   if (t === 0 || t === 1) {
     const d = randInt(3, 9);
-    // sometimes force a zero in the middle of the quotient (e.g. 102)
-    const q = t === 1 ? randInt(1, 9) * 100 + randInt(1, 9) : randInt(12, Math.floor(999 / d));
+    // sometimes force a zero in the middle of the quotient (e.g. 102); keep the dividend 3-digit
+    const q = t === 1 ? randInt(1, Math.floor(9 / d)) * 100 + randInt(1, 9) : randInt(12, Math.floor(999 / d));
     const total = q * d;
     const missing = Number(String(q).replace('0', ''));
+    const parts = [Math.floor(q / 100) * 100, Math.floor((q % 100) / 10) * 10, q % 10];
+    while (parts.length > 1 && parts[0] === 0) parts.shift(); // no "0 x d" line for a 2-digit quotient
     return {
       prompt: `${total} ÷ ${d} = ?`, answer: String(q),
-      hint: 'Divide the hundreds, then the tens, then the ones.',
-      explain: `${total} ÷ ${d}: ${Math.floor(q / 100) * 100} x ${d} = ${Math.floor(q / 100) * 100 * d}, ${Math.floor((q % 100) / 10) * 10} x ${d} = ${Math.floor((q % 100) / 10) * 10 * d}, ${q % 10} x ${d} = ${(q % 10) * d}. Quotient ${q}.`,
+      hint: q >= 100 ? 'Divide the hundreds, then the tens, then the ones.' : 'Divide the tens, then the ones.',
+      explain: `${total} ÷ ${d}: ${parts.map((p) => `${p} x ${d} = ${p * d}`).join(', ')}. Quotient ${q}.`,
       wrongTags: wt(q, { [missing]: 'missing-zero' }),
     };
   }
@@ -268,7 +273,7 @@ function L6() {
     prompt: `Pens cost ${price} dollars each. With ${money} dollars, how many pens can you buy?`, answer: String(q),
     choices: mkChoices(q, [q + 1, r, q - 1], null),
     hint: 'You cannot buy part of a pen.',
-    explain: `${money} ÷ ${price} = ${q} R${r}. The leftover ${r} dollars is not enough for another pen, so ${q}.`,
+    explain: `${money} ÷ ${price} = ${q} R${r}. The leftover ${r} dollar${r === 1 ? '' : 's'} is not enough for another pen, so ${q}.`,
     wrongTags: wt(q, { [q + 1]: 'rounded-up-remainder' }),
   };
 }
@@ -331,9 +336,9 @@ function L8() {
   }
   if (t === 2) {
     const places = pick([1, 2]);
-    const q = places === 1 ? randInt(3, 99) : randInt(101, 999);
     const d = randInt(2, 9);
-    const scaled = q * d; // dividend scaled
+    let q, scaled;
+    do { q = places === 1 ? randInt(3, 99) : randInt(101, 999); scaled = q * d; } while (scaled % 10 === 0); // dividend must really be a decimal
     const sd = dec(scaled, places), a = dec(q, places);
     return {
       prompt: `${sd} ÷ ${d} = ?`, answer: a,
@@ -343,7 +348,8 @@ function L8() {
     };
   }
   if (t === 3) {
-    const n = randInt(1, 9), d = randInt(2, 10);
+    let n, d;
+    do { d = randInt(2, 10); n = randInt(1, d - 1); } while (gcd(n, d) !== 1); // proper, so the answer really is a fraction
     const a = frac(n, d);
     return {
       prompt: `Write ${n} ÷ ${d} as a fraction.`, answer: a,
@@ -386,7 +392,7 @@ function L9() {
     return {
       prompt: `${w} ÷ 1/${d} = ?`, answer: String(a),
       choices: mkChoices(a, [frac(w, d), w, a + d], () => randInt(2, 60)),
-      hint: `How many ${d === 2 ? 'halves' : d === 3 ? 'thirds' : d === 4 ? 'quarters' : `1/${d}s`} fit in ${w}?`,
+      hint: `How many ${['', '', 'halves', 'thirds', 'quarters', 'fifths', 'sixths'][d]} fit in ${w}?`,
       explain: `Each whole has ${d} pieces of size 1/${d}, so ${w} wholes have ${w} x ${d} = ${a}.`,
       wrongTags: wt(a, { [frac(w, d)]: 'division-makes-smaller', [w]: 'division-makes-smaller' }),
     };
@@ -400,7 +406,8 @@ function L9() {
       wrongTags: { [frac(w, d)]: 'inverted-wrong-fraction' },
     };
   }
-  const d = randInt(11, 25), q = randInt(2, 9), scaled = d * q;
+  let d; do { d = randInt(11, 25); } while (d % 10 === 0); // divisor must really be a decimal
+  const q = randInt(2, 9), scaled = d * q;
   const dd = dec(d, 1), sd = dec(scaled, 1); // e.g. 4.8 ÷ 1.2 = 4
   return {
     prompt: `${sd} ÷ ${dd} = ?`, answer: String(q),
@@ -458,10 +465,11 @@ function L10() {
     const perCents = pick([150, 175, 200, 225, 240, 250, 275, 300, 325, 350, 375, 400]);
     const totalCents = kg * perCents;
     const a = dec(perCents, 2);
+    const money = `$${(totalCents / 100).toFixed(2)}`, per = `$${(perCents / 100).toFixed(2)}`;
     return {
-      prompt: `${dec(totalCents, 2)} dollars for ${kg} kg of apples. What is the price per kg?`, answer: a,
+      prompt: `${money} for ${kg} kg of apples. What is the price per kg?`, answer: a,
       hint: `Divide the total cost by ${kg}.`,
-      explain: `${dec(totalCents, 2)} ÷ ${kg} = ${a} dollars per kg.`,
+      explain: `${money} ÷ ${kg} = ${per} per kg.`,
     };
   }
   const w = randInt(2, 6), [n, d] = simpleFrac(7, 2, 8);

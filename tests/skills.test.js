@@ -58,5 +58,10 @@ describe('answer checking', () => {
     expect(isCorrect({ answer: '12' }, '13')).toBe(false);
     expect(isCorrect({ answer: '12' }, '')).toBe(false);
     expect(isCorrect({ answer: 'acute' }, 'Acute')).toBe(true);
+    expect(isCorrect({ answer: '9/2' }, '4.5')).toBe(true);
+    expect(isCorrect({ answer: '9/2' }, '4 1/2')).toBe(true);
+    expect(isCorrect({ answer: '-3/4' }, '-0.75')).toBe(true);
+    expect(isCorrect({ answer: '3/5', choices: ['3/5', '6/10'] }, '6/10')).toBe(false);
+    expect(isCorrect({ answer: '0.5' }, '.5')).toBe(true);
   });
 });

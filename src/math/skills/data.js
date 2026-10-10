@@ -211,29 +211,32 @@ const LEVELS = {
       };
     }
     if (t === 1) {
+      // The numberline visual draws repeated marks on top of each other, so the data
+      // must be in the prompt; the visual just shows which values occur.
       const marks = [];
       const lo = randInt(0, 3), hi = lo + randInt(3, 5);
       const n = randInt(7, 11);
       for (let i = 0; i < n; i++) marks.push(randInt(lo, hi));
+      const list = seq(marks);
       if (randInt(0, 1) === 0) {
         const v = randInt(lo, hi);
         const count = marks.filter((m) => m === v).length;
         return {
-          prompt: `The line plot shows how many books each kid read. How many kids read exactly ${v} books?`,
+          prompt: `Books read by ${n} kids: ${list}. How many kids read exactly ${v} books?`,
           answer: String(count),
-          visual: { type: 'numberline', min: lo, max: hi, step: 1, marks },
-          hint: `Count the dots above ${v}.`,
-          explain: `There are ${count} dots above ${v}, so ${count} kids read ${v} books.`,
+          visual: { type: 'numberline', min: lo, max: hi, step: 1, marks: [...new Set(marks)] },
+          hint: `Count how many times ${v} appears.`,
+          explain: `${v} appears ${count} time${count === 1 ? '' : 's'} in the list, so ${count} kid${count === 1 ? '' : 's'} read ${v} books.`,
         };
       }
       const over = randInt(lo, hi - 1);
       const count = marks.filter((m) => m > over).length;
       return {
-        prompt: `The line plot shows how many goals each player scored. How many players scored more than ${over}?`,
+        prompt: `Goals scored by ${n} players: ${list}. How many players scored more than ${over}?`,
         answer: String(count),
-        visual: { type: 'numberline', min: lo, max: hi, step: 1, marks },
-        hint: `Count every dot to the right of ${over}.`,
-        explain: `Dots at numbers bigger than ${over}: ${count} in all.`,
+        visual: { type: 'numberline', min: lo, max: hi, step: 1, marks: [...new Set(marks)] },
+        hint: `Count every number bigger than ${over}.`,
+        explain: `Numbers bigger than ${over}: ${marks.filter((m) => m > over).join(' ') || 'none'}. That is ${count} in all.`,
       };
     }
     // spinner: three colours with distinct counts
@@ -590,7 +593,7 @@ const LEVELS = {
           prompt: `${pick(KIDS)} flipped a bottle cap ${total} times and it landed up ${hits} times. What is the relative frequency of landing up? Write a fraction in lowest terms.`,
           answer: frac(hits, total),
           hint: `${hits} out of ${total}, then simplify.`,
-          explain: `${hits}/${total} simplifies to ${frac(hits, total)}.`,
+          explain: frac(hits, total) === `${hits}/${total}` ? `${hits}/${total} is already in lowest terms.` : `${hits}/${total} simplifies to ${frac(hits, total)}.`,
         };
       }
       const pct = Math.round((hits / total) * 1000) / 10;
@@ -598,7 +601,7 @@ const LEVELS = {
         prompt: `${pick(KIDS)} shot ${total} pucks and scored ${hits} times. What is the relative frequency of scoring, as a percent?`,
         answer: String(pct),
         hint: `${hits} ÷ ${total} × 100.`,
-        explain: `${hits} ÷ ${total} = ${hits / total}, which is ${pct}%.`,
+        explain: `${hits} ÷ ${total} = ${Math.round((hits / total) * 1000) / 1000}, which is ${pct}%.`,
       };
     }
     const makers = [
@@ -615,7 +618,7 @@ const LEVELS = {
       () => {
         const p = pick([4, 5, 8, 10]), cost = randInt(1, 3), win = p * cost + pick([-p, 0, p, 2 * p]);
         const ev = win / p - cost;
-        return [`A ticket costs ${cost} dollars. You win ${win} dollars with probability 1/${p}. On average, how many dollars do you gain or lose per ticket? Use a minus sign for a loss.`, ev,
+        return [`A ticket costs ${cost} dollar${cost === 1 ? '' : 's'}. You win ${win} dollars with probability 1/${p}. On average, how many dollars do you gain or lose per ticket? Use a minus sign for a loss.`, ev,
           `Expected win = ${win} ÷ ${p} = ${win / p}. Minus the ${cost} dollar cost gives ${ev}.`];
       },
     ];

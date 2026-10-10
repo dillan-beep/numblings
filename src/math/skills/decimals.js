@@ -130,8 +130,9 @@ L[2] = () => pick([
 // 3. Hundredths; money as decimals; compare tenths vs hundredths.
 L[3] = () => pick([
   () => {
-    const t = randInt(1, 9), h = randInt(10, 99);
-    let a = `0.${t}`, b = `0.${h}`;
+    const t = randInt(1, 9);
+    let h; do { h = randInt(10, 99); } while (h === t * 10); // 0.5 vs 0.50 would be a tie
+    const a = `0.${t}`, b = `0.${h}`;
     const bigger = t * 10 > h ? a : b;
     const [x, y] = shuffle([a, b]);
     return {
@@ -236,13 +237,14 @@ L[4] = () => pick([
     };
   },
   () => {
-    const x = randInt(100, 999) / 100;
-    const r = Math.round(x);
+    let h; do { h = randInt(100, 999); } while (h % 100 === 0); // avoid "Round 5" (already whole)
+    const x = h / 100, tenths = Math.floor(h / 10) % 10;
+    const r = Math.floor(h / 100) + (tenths >= 5 ? 1 : 0);
     return {
       prompt: `Round ${num(x)} to the nearest whole number.`, answer: String(r),
       visual: { type: 'numberline', min: Math.floor(x), max: Math.floor(x) + 1, step: 0.1, highlight: x },
       hint: 'Look at the tenths digit. 5 or more rounds up.',
-      explain: `${num(x)} is between ${Math.floor(x)} and ${Math.floor(x) + 1}. The tenths digit is ${Math.floor(x * 10) % 10}, so it rounds to ${r}.`,
+      explain: `${num(x)} is between ${Math.floor(x)} and ${Math.floor(x) + 1}. The tenths digit is ${tenths}, so it rounds to ${r}.`,
     };
   },
   () => {
@@ -402,7 +404,8 @@ L[7] = () => pick([
     };
   },
   () => {
-    const x = randInt(11, 99) / 10, w = randInt(2, 9);
+    let t; do { t = randInt(11, 99); } while (t % 10 === 0); // keep a real decimal (not "5 × 2")
+    const x = t / 10, w = randInt(2, 9);
     return {
       prompt: `${num(x)} × ${w} = ?`, answer: num(x * w),
       hint: `Think ${Math.round(x * 10)} × ${w}, then put the decimal back.`,
@@ -411,10 +414,11 @@ L[7] = () => pick([
   },
   () => {
     const [n, d, dec] = pick([[1, 8, '0.125'], [3, 8, '0.375'], [5, 8, '0.625'], [7, 8, '0.875'], [1, 4, '0.25'], [3, 4, '0.75'], [1, 2, '0.5'], [1, 5, '0.2'], [1, 40, '0.025'], [3, 40, '0.075']]);
+    const digits = dec.split('.')[1], top = Number(digits), bottom = Math.pow(10, digits.length);
     return {
       prompt: `Write ${dec} as a fraction.`, answer: `${n}/${d}`,
-      hint: `${dec} is ${dec.split('.')[1]} ${dec.length === 5 ? 'thousandths' : dec.length === 4 ? 'hundredths' : 'tenths'}.`,
-      explain: `${dec} = ${dec.split('.')[1]}/${Math.pow(10, dec.split('.')[1].length)} = ${n}/${d}.`,
+      hint: `${dec} is ${top} ${digits.length === 3 ? 'thousandths' : digits.length === 2 ? 'hundredths' : 'tenths'}.`,
+      explain: `${dec} = ${top}/${bottom} = ${n}/${d}.`,
     };
   },
   () => {
@@ -434,12 +438,14 @@ L[7] = () => pick([
     };
   },
   () => {
-    const x = randInt(1000, 9999) / 1000;
-    const r = Math.round(x * 100) / 100;
+    // Integer arithmetic: 1.005 * 100 = 100.49999... in floating point, which would round the wrong way.
+    let m; do { m = randInt(1000, 9999); } while (m % 10 === 0); // need a real thousandths digit
+    const x = m / 1000, last = m % 10;
+    const r = (Math.floor(m / 10) + (last >= 5 ? 1 : 0)) / 100;
     return {
       prompt: `Round ${num(x)} to the nearest hundredth.`, answer: num(r),
       hint: 'Look at the thousandths digit.',
-      explain: `The thousandths digit is ${Math.round(x * 1000) % 10}, so ${num(x)} rounds to ${num(r)}.`,
+      explain: `The thousandths digit is ${last}, so ${num(x)} rounds to ${num(r)}.`,
     };
   },
 ])();
@@ -459,7 +465,7 @@ L[8] = () => pick([
     const ans = price - (price * p) / 100;
     return {
       prompt: `A $${price} ${item} is ${p}% off. What is the new price?`,
-      answer: num(ans), choices: choices(num(ans), [num(price - p), num((price * p) / 100), num(price + (price * p) / 100)]),
+      answer: num(ans), choices: choices(num(ans), [...(price > p ? [num(price - p)] : []), num((price * p) / 100), num(price + (price * p) / 100), num(ans + 10)]),
       hint: `First find ${p}% of ${price}, then take it away.`,
       explain: `${p}% of ${price} is ${(price * p) / 100}. ${price} − ${(price * p) / 100} = ${num(ans)}.`,
       wrongTags: { [num(price - p)]: 'subtract-percent-from-price', [num((price * p) / 100)]: 'discount-not-price' },
@@ -485,7 +491,7 @@ L[8] = () => pick([
     const ans = num((p * base) / 100);
     return {
       prompt: `What is ${p}% of ${base}?`,
-      answer: ans, choices: choices(ans, [num((p * base) / 10), num(base - p), num(p)]),
+      answer: ans, choices: choices(ans, [num((p * base) / 10), ...(base > p ? [num(base - p)] : []), num(p), num(base + p)]),
       visual: { type: 'fractionbar', parts: 20, shaded: p / 5 },
       explain: `${p}% is ${p}/100. ${base} × ${p} ÷ 100 = ${ans}.`,
       wrongTags: { [num(base - p)]: 'subtract-percent-from-price', [num(p)]: 'percent-as-number' },
@@ -578,7 +584,7 @@ L[10] = () => pick([
     const now = old + (old * p) / 100;
     const wrong = num(Math.round(((now - old) / now) * 1000) / 10);
     return {
-      prompt: `A price rose from $${old} to $${now}. What is the percent increase? (just the number)`,
+      prompt: `A price rose from $${old} to $${Number.isInteger(now) ? now : money(now)}. What is the percent increase? (just the number)`,
       answer: String(p), choices: choices(p, [wrong, now - old, num(Math.round((now / old) * 1000) / 10)]),
       hint: 'Divide the change by the ORIGINAL price.',
       explain: `Change is ${now - old}. ${now - old} ÷ ${old} = ${num((now - old) / old)} = ${p}%.`,
@@ -589,7 +595,7 @@ L[10] = () => pick([
     const old = pick([40, 50, 60, 80, 100, 120, 200]), p = pick([10, 20, 25, 40, 50]);
     const now = old - (old * p) / 100;
     return {
-      prompt: `A price dropped from $${old} to $${now}. What is the percent decrease? (just the number)`,
+      prompt: `A price dropped from $${old} to $${Number.isInteger(now) ? now : money(now)}. What is the percent decrease? (just the number)`,
       answer: String(p),
       hint: 'Divide the change by the original price.',
       explain: `Change is ${old - now}. ${old - now} ÷ ${old} = ${num((old - now) / old)} = ${p}%.`,
@@ -614,16 +620,18 @@ L[10] = () => pick([
   },
   () => {
     const n = randInt(2, 6), each = randInt(2, 9) / 2, m = randInt(n + 1, 12), item = pick(['pens', 'apples', 'muffins', 'stickers']);
+    const total = n * each;
     return {
-      prompt: `${n} ${item} cost $${num(n * each)}. How much do ${m} ${item} cost?`,
+      prompt: `${n} ${item} cost $${Number.isInteger(total) ? total : money(total)}. How much do ${m} ${item} cost?`,
       answer: num(m * each),
       hint: 'Find the cost of one first.',
       explain: `One costs ${num(n * each)} ÷ ${n} = ${num(each)}. ${m} × ${num(each)} = ${num(m * each)}.`,
     };
   },
   () => {
-    const sale = randInt(2, 12) * 10, p = pick([20, 25, 50]);
-    const orig = sale / (1 - p / 100);
+    // Pick the original first so the sale price divides back cleanly (no 53.333...).
+    const p = pick([20, 25, 50]), orig = randInt(2, 12) * 20;
+    const sale = orig * (1 - p / 100);
     return {
       prompt: `After a ${p}% discount a jacket costs $${sale}. What was the original price?`,
       answer: num(orig), choices: choices(num(orig), [num(sale * (1 + p / 100)), num(sale + p), num(sale * 2)]),

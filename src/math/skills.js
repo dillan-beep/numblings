@@ -35,22 +35,28 @@ export function normalizeAnswer(s) {
     .replace(/^0+(\d)/, '$1');
 }
 
-function parseFraction(s) {
-  const m = /^(-?\d+)\/(\d+)$/.exec(s);
-  if (!m || Number(m[2]) === 0) return null;
-  return Number(m[1]) / Number(m[2]);
+// Numeric value of "12", "4.5", "3/4", "-3/4", or a mixed number "2 1/2" (raw, un-normalized input). null if not numeric.
+export function numericValue(raw) {
+  const s = String(raw).trim().replace(/^\$/, '').replace(/¢$/, '').replace(/,/g, '').replace(/−/g, '-');
+  const mixed = /^(-?)(\d+)\s+(\d+)\/(\d+)$/.exec(s);
+  if (mixed && Number(mixed[4]) !== 0) { const v = Number(mixed[2]) + Number(mixed[3]) / Number(mixed[4]); return mixed[1] ? -v : v; }
+  const t = s.replace(/\s+/g, '');
+  const frac = /^(-?\d+)\/(\d+)$/.exec(t);
+  if (frac) return Number(frac[2]) === 0 ? null : Number(frac[1]) / Number(frac[2]);
+  if (t === '' || t === '-' || t === '.') return null;
+  const n = Number(t);
+  return Number.isNaN(n) ? null : n;
 }
 
 export function isCorrect(q, given) {
   const a = normalizeAnswer(q.answer), g = normalizeAnswer(given);
   if (a === g) return true;
   if (a === '' || g === '') return false;
-  // numeric equivalence (handles 4.50 vs 4.5, 012 vs 12)
-  const na = Number(a), ng = Number(g);
-  if (!Number.isNaN(na) && !Number.isNaN(ng)) return Math.abs(na - ng) < 1e-9;
-  // fraction equivalence only when the expected answer is a fraction and the child typed a fraction
-  const fa = parseFraction(a), fg = parseFraction(g);
-  if (fa !== null && fg !== null) return Math.abs(fa - fg) < 1e-9;
+  // Choice questions must match the chosen button exactly (e.g. "simplest form" questions).
+  if (q.choices) return false;
+  // Typed answers: any numerically equal form counts (4.50, 6/8, 2 1/2, .5).
+  const va = numericValue(q.answer), vg = numericValue(given);
+  if (va !== null && vg !== null) return Math.abs(va - vg) < 1e-9;
   // time: 3:5 vs 3:05
   const ta = /^(\d{1,2}):(\d{1,2})$/.exec(a), tg = /^(\d{1,2}):(\d{1,2})$/.exec(g);
   if (ta && tg) return Number(ta[1]) === Number(tg[1]) && Number(ta[2]) === Number(tg[2]);

@@ -20,6 +20,7 @@ function addMin(h, m, delta) {
 function elapsed(h1, m1, h2, m2) { let d = ((h2 % 12) * 60 + m2) - ((h1 % 12) * 60 + m1); if (d <= 0) d += 720; return d; }
 const h12 = (h24) => { const h = h24 % 12 === 0 ? 12 : h24 % 12; return `${h} ${h24 < 12 ? 'a.m.' : 'p.m.'}`; };
 const hm = (mins) => { const h = Math.floor(mins / 60), m = mins % 60; return h === 0 ? `${m} min` : m === 0 ? `${h} h` : `${h} h ${m} min`; };
+const ord = (n) => { const r = n % 100; if (r >= 11 && r <= 13) return `${n}th`; return `${n}${['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`; };
 const otherDays = (d) => shuffle(DAYS.filter((x) => x !== d)).slice(0, 3);
 const otherMonths = (m) => shuffle(MONTHS.filter((x) => x !== m)).slice(0, 3);
 
@@ -64,7 +65,7 @@ const L3 = [
   () => readClock(randInt(1, 12), 30, true),
   () => setClock(randInt(1, 12), 30),
   () => { const h = randInt(1, 12); return { prompt: `Half past ${h} is what time?`, answer: fmt(h, 30), explain: `Half past ${h} means 30 minutes after ${h}:00, so ${h}:30.` }; },
-  () => { const i = randInt(0, 6), d = randInt(1, 20); return { prompt: `${DAYS[i]} is the ${d}th. What day of the week is the ${d + 7}th?`, answer: DAYS[i], choices: mc(DAYS[i], otherDays(DAYS[i])), explain: `7 days later is the same day of the week: ${DAYS[i]}.` }; },
+  () => { const i = randInt(0, 6), d = randInt(1, 20); return { prompt: `${DAYS[i]} is the ${ord(d)}. What day of the week is the ${ord(d + 7)}?`, answer: DAYS[i], choices: mc(DAYS[i], otherDays(DAYS[i])), explain: `7 days later is the same day of the week: ${DAYS[i]}.` }; },
   () => { const i = randInt(0, 6), n = randInt(2, 5); const a = DAYS[(i + n) % 7]; return { prompt: `What day is ${n} days after ${DAYS[i]}?`, answer: a, choices: mc(a, otherDays(a)), explain: `Count ${n} days on from ${DAYS[i]}: ${a}.` }; },
   () => pick([{ prompt: 'How many minutes are in half an hour?', answer: '30', explain: 'An hour is 60 minutes, so half an hour is 30 minutes.' }, { prompt: 'How many days are in two weeks?', answer: '14', explain: '2 × 7 = 14 days.' }, { prompt: 'How many days does a week have?', answer: '7', explain: 'Sunday to Saturday is 7 days.' }]),
   () => { const h = randInt(1, 12); const next = h === 12 ? 1 : h + 1; return { prompt: `The short hand is halfway between ${h} and ${next}, and the long hand points to 6. What time is it?`, answer: fmt(h, 30), choices: mc(fmt(h, 30), [fmt(next, 30), fmt(h, 6), fmt(next, 0)]), wrongTags: { [fmt(next, 30)]: 'hour-hand-read-high', [fmt(h, 6)]: 'ticks-not-times-5' }, explain: `The hour hand has not reached ${next} yet, so the hour is ${h}. Long hand on 6 is 30 minutes: ${fmt(h, 30)}.` }; },
@@ -97,12 +98,12 @@ const L5 = [
 const L6 = [
   () => { const h1 = randInt(1, 12), m1 = randInt(0, 11) * 5, d = randInt(65, 300); const [h2, m2] = addMin(h1, m1, d);
     const toNext = (60 - m1) % 60; return { prompt: `A train leaves at ${fmt(h1, m1)} and arrives at ${fmt(h2, m2)}. How many minutes is the trip?`, answer: String(d), hint: 'Jump to the next hour, then count hours, then minutes.',
-      explain: `${fmt(h1, m1)} to the next hour is ${toNext} min, then on to ${fmt(h2, m2)}: total ${d} min (${hm(d)}).` }; },
+      explain: `${toNext ? `${fmt(h1, m1)} to the next hour is ${toNext} min, then on to ${fmt(h2, m2)}` : `Count the hours from ${fmt(h1, m1)}, then the minutes, to ${fmt(h2, m2)}`}: total ${d} min (${hm(d)}).` }; },
   () => { const h1 = randInt(1, 12), m1 = randInt(0, 11) * 5, d = pick([45, 60, 75, 90, 105, 120, 135, 150]); const [h2, m2] = addMin(h1, m1, d);
     return { prompt: `A movie starts at ${fmt(h1, m1)} and lasts ${hm(d)}. What time does it end?`, answer: fmt(h2, m2), explain: `${fmt(h1, m1)} + ${hm(d)} = ${fmt(h2, m2)}.` }; },
   () => { const h2 = randInt(1, 12), m2 = randInt(0, 11) * 5, d = pick([40, 50, 70, 80, 90, 110]); const [h1, m1] = addMin(h2, m2, -d);
     return { prompt: `A game ends at ${fmt(h2, m2)} after lasting ${hm(d)}. What time did it start?`, answer: fmt(h1, m1), explain: `Count back ${hm(d)} from ${fmt(h2, m2)}: ${fmt(h1, m1)}.` }; },
-  () => { const h24 = randInt(13, 23), m = randInt(0, 11) * 5; const ans = `${h24 - 12}:${pad(m)} p.m.`; return { prompt: `${h24}:${pad(m)} on a 24-hour clock is what time?`, answer: ans, choices: mc(ans, [`${h24 - 10}:${pad(m)} p.m.`, `${h24 - 12}:${pad(m)} a.m.`, `${Math.max(1, h24 - 13)}:${pad(m)} p.m.`]), wrongTags: { [`${h24 - 10}:${pad(m)} p.m.`]: 'subtracted-10-not-12', [`${h24 - 12}:${pad(m)} a.m.`]: 'am-pm-swapped' }, explain: `Subtract 12 from the hour: ${h24} − 12 = ${h24 - 12}, so ${ans}.` }; },
+  () => { const h24 = randInt(13, 23), m = randInt(0, 11) * 5; const ans = `${h24 - 12}:${pad(m)} p.m.`; return { prompt: `${h24}:${pad(m)} on a 24-hour clock is what time?`, answer: ans, choices: mc(ans, [`${h24 - 10}:${pad(m)} p.m.`, `${h24 - 12}:${pad(m)} a.m.`, `${Math.max(1, h24 - 13)}:${pad(m)} p.m.`]), wrongTags: { [`${h24 - 10}:${pad(m)} p.m.`]: 'subtracted-10-not-12', [`${h24 - 12}:${pad(m)} a.m.`]: 'am-pm-swapped' }, explain: `Subtract 12 from the hour: ${h24} − 12 = ${h24 - 12}, so ${ans}` }; },
   () => { const h = randInt(1, 11); return { prompt: `${h} p.m. in 24-hour time is __:00`, answer: `${h + 12}:00`, explain: `Add 12 to the hour for p.m.: ${h} + 12 = ${h + 12}, so ${h + 12}:00.` }; },
   () => { const h1 = randInt(1, 11), m1 = randInt(0, 11) * 5, d = randInt(70, 240); const [h2, m2] = addMin(h1, m1, d);
     return { prompt: `From ${fmt(h1, m1)} to ${fmt(h2, m2)}, how long is that in minutes?`, answer: String(d), choices: mc(d, [Math.abs((h2 - h1) * 100 + (m2 - m1)), d - 60, d + 60]), wrongTags: { [Math.abs((h2 - h1) * 100 + (m2 - m1))]: 'subtracted-times-as-decimals' }, explain: `Jump to the hour, then count: ${hm(d)} = ${d} minutes.` }; },
@@ -121,7 +122,7 @@ const L7 = [
     () => { const m = randInt(1, 4); return { prompt: `${m}.5 min = __ s`, answer: String(m * 60 + 30), explain: `${m} min = ${m * 60} s, plus half a minute (30 s) = ${m * 60 + 30} s.` }; }])(),
   () => { const h = randInt(8, 10), a = randInt(0, 5) * 5, d1 = pick([40, 45, 50, 55]), d2 = pick([30, 35, 40, 45, 50]); const [h2, m2] = addMin(h, a, d1); const [h3, m3] = addMin(h2, m2, d2);
     return { prompt: `Timetable: Math ${fmt(h, a)} to ${fmt(h2, m2)}, Reading ${fmt(h2, m2)} to ${fmt(h3, m3)}. How many minutes is Reading?`, answer: String(d2), explain: `Reading runs ${fmt(h2, m2)} to ${fmt(h3, m3)}: ${d2} minutes.` }; },
-  () => { const start = randInt(1, 5), days = randInt(2, 6); return { prompt: `A trip starts on ${DAYS[start]} and lasts ${days} days. On what day does it end?`, answer: DAYS[(start + days) % 7], choices: mc(DAYS[(start + days) % 7], otherDays(DAYS[(start + days) % 7])), explain: `Count ${days} days on from ${DAYS[start]}: ${DAYS[(start + days) % 7]}.` }; },
+  () => { const start = randInt(1, 5), days = randInt(2, 6); return { prompt: `A trip starts on ${DAYS[start]}. You come home ${days} days later. What day do you come home?`, answer: DAYS[(start + days) % 7], choices: mc(DAYS[(start + days) % 7], otherDays(DAYS[(start + days) % 7])), explain: `Count ${days} days on from ${DAYS[start]}: ${DAYS[(start + days) % 7]}.` }; },
   () => { const h = randInt(1, 6), m = randInt(1, 11) * 5; return { prompt: `${h} h ${m} min = __ min`, answer: String(h * 60 + m), explain: `${h} × 60 + ${m} = ${h * 60 + m} minutes.` }; },
 ];
 
@@ -129,8 +130,8 @@ const L7 = [
 const ZONES = [['Vancouver', -3, '3 hours behind'], ['Calgary', -2, '2 hours behind'], ['Winnipeg', -1, '1 hour behind'], ['Halifax', 1, '1 hour ahead']];
 const FRACS = [[1, 2], [1, 4], [3, 4], [1, 3], [2, 3], [1, 5], [1, 6], [5, 6], [1, 10], [1, 12]];
 const L8 = [
-  () => { const [city, off, desc] = pick(ZONES); const h = randInt(8, 20); const ans = h12(h + off); const wrong = h12(h - off);
-    return { prompt: `It is ${h12(h)} in Toronto. What time is it in ${city} (${desc})?`, answer: ans, choices: mc(ans, [wrong, h12(h), h12(h + off + 12)]), wrongTags: { [wrong]: 'time-zone-wrong-direction', [h12(h + off + 12)]: 'am-pm-swapped' }, explain: `${desc} means ${off > 0 ? 'add' : 'subtract'} ${Math.abs(off)}: ${ans}.` }; },
+  () => { const [city, off, desc] = pick(ZONES); const h = randInt(8, 20); const ans = h12(h + off); const wrong = h12(h - off); const swapped = h12((h + off + 12) % 24);
+    return { prompt: `It is ${h12(h)} in Toronto. What time is it in ${city} (${desc})?`, answer: ans, choices: mc(ans, [wrong, h12(h), swapped]), wrongTags: { [wrong]: 'time-zone-wrong-direction', [swapped]: 'am-pm-swapped' }, explain: `${desc} means ${off > 0 ? 'add' : 'subtract'} ${Math.abs(off)}: ${ans}` }; },
   () => pick([() => { const w = randInt(2, 8); return { prompt: `${w} weeks = __ days`, answer: String(w * 7), explain: `${w} × 7 = ${w * 7} days.` }; },
     () => { const d = randInt(2, 7); return { prompt: `${d} days = __ hours`, answer: String(d * 24), explain: `${d} × 24 = ${d * 24} hours.` }; },
     () => { const h = randInt(2, 9); return { prompt: `${h} hours = __ minutes`, answer: String(h * 60), explain: `${h} × 60 = ${h * 60} minutes.` }; },
@@ -139,8 +140,9 @@ const L8 = [
   () => { const [n, d] = pick(FRACS); const ans = 60 * n / d; const wrong = d === 3 ? n * 33 : ans + 10;
     return { prompt: `${n}/${d} of an hour = __ min`, answer: String(ans), choices: mc(ans, [wrong, ans - 5, n * 10 + d]), wrongTags: { [wrong]: d === 3 ? 'third-of-hour-is-33' : 'fraction-of-hour-guess' }, explain: `60 ÷ ${d} = ${60 / d}, times ${n} = ${ans} minutes.` }; },
   () => { const [n, d] = pick([[1, 2], [1, 4], [3, 4], [1, 3], [1, 6], [1, 8]]); return { prompt: `${n}/${d} of a day = __ hours`, answer: String(24 * n / d), explain: `24 ÷ ${d} = ${24 / d}, times ${n} = ${24 * n / d} hours.` }; },
-  () => { const m = pick([15, 20, 30, 45, 90, 150, 75]); const ans = num(m / 60); return { prompt: `${m} minutes = __ hours (as a decimal)`, answer: ans, explain: `${m} ÷ 60 = ${ans} hours.` }; },
-  () => { const [city, off, desc] = pick(ZONES); const h = randInt(8, 20); const local = h12(h); return { prompt: `It is ${h12(h + off)} in ${city}, which is ${desc} Toronto. What time is it in Toronto?`, answer: local, choices: mc(local, [h12(h + 2 * off), h12(h + off), h12(h + 12)]), explain: `Go the other way: ${off > 0 ? 'subtract' : 'add'} ${Math.abs(off)} to get ${local}.` }; },
+  // Only minutes that give a terminating decimal (20 min = 0.333... would need rounding).
+  () => { const m = pick([15, 30, 45, 90, 150, 75, 105, 135]); const ans = num(m / 60); return { prompt: `${m} minutes = __ hours (as a decimal)`, answer: ans, explain: `${m} ÷ 60 = ${ans} hours.` }; },
+  () => { const [city, off, desc] = pick(ZONES); const h = randInt(8, 20); const local = h12(h); return { prompt: `It is ${h12(h + off)} in ${city}, which is ${desc}${off > 0 ? ' of' : ''} Toronto. What time is it in Toronto?`, answer: local, choices: mc(local, [h12(h + 2 * off), h12(h + off), h12((h + 12) % 24)]), explain: `Go the other way: ${off > 0 ? 'subtract' : 'add'} ${Math.abs(off)} to get ${local}` }; },
 ];
 
 // ---------- Level 9: speed, pace, average speed ----------
@@ -152,7 +154,7 @@ const L9 = [
   () => { const km = randInt(3, 12), pace = randInt(4, 8); return { prompt: `At a pace of ${pace} min per km, how many minutes does ${km} km take?`, answer: String(km * pace), explain: `${pace} × ${km} = ${km * pace} minutes.` }; },
   () => { const t1 = randInt(1, 3), t2 = randInt(1, 3), avg = pick([40, 50, 60, 70]); const d1 = avg * t1 + pick([-10, 10]) * t1, d2 = avg * (t1 + t2) - d1;
     return { prompt: `A car goes ${d1} km in ${t1} h, then ${d2} km in ${t2} h. Average speed for the whole trip in km/h?`, answer: String(avg), hint: 'Total distance ÷ total time.', explain: `Total ${d1 + d2} km in ${t1 + t2} h: ${d1 + d2} ÷ ${t1 + t2} = ${avg} km/h.` }; },
-  () => { const s = pick([60, 90, 120]), m = pick([20, 30, 40, 45]); return { prompt: `A bus travels at ${s} km/h. How far does it go in ${m} minutes?`, answer: num(s * m / 60), explain: `${m} min = ${num(m / 60)} h, and ${s} × ${num(m / 60)} = ${num(s * m / 60)} km.` }; },
+  () => { const s = pick([60, 90, 120]), m = pick([20, 30, 40, 45]); return { prompt: `A bus travels at ${s} km/h. How far does it go in ${m} minutes?`, answer: num(s * m / 60), explain: `${m} min is ${m}/60 of an hour, so ${s} × ${m} ÷ 60 = ${num(s * m / 60)} km.` }; },
 ];
 
 // ---------- Level 10: multi-step scheduling, leap years, mixed units ----------
@@ -167,7 +169,7 @@ const L10 = [
   () => { const h = randInt(1, 3), m = randInt(1, 11) * 5, dec = pick([0.5, 1.5, 2.5, 0.25, 0.75]); const ans = h * 60 + m + dec * 60;
     return { prompt: `${h} h ${m} min + ${num(dec)} h = __ min`, answer: String(ans), explain: `${h * 60 + m} min + ${dec * 60} min = ${ans} min.` }; },
   () => { const h1 = randInt(21, 23), m1 = randInt(0, 11) * 5; const toMid = 1440 - (h1 * 60 + m1); const d = toMid + randInt(3, 36) * 5; const end = (h1 * 60 + m1 + d) % 1440;
-    return { prompt: `A flight leaves at ${h1}:${pad(m1)} and lands at ${Math.floor(end / 60)}:${pad(end % 60)} the next morning (24-hour time). How many minutes is the flight?`, answer: String(d), explain: `To midnight: ${1440 - h1 * 60 - m1} min, then ${end} min more: ${d} minutes.` }; },
+    return { prompt: `A flight leaves at ${h1}:${pad(m1)} and lands at ${pad(Math.floor(end / 60))}:${pad(end % 60)} the next morning (24-hour time). How many minutes is the flight?`, answer: String(d), explain: `To midnight: ${1440 - h1 * 60 - m1} min, then ${end} min more: ${d} minutes.` }; },
   () => { const [n1, d1] = pick([[3, 4], [1, 2], [2, 3], [1, 4]]), [n2, d2] = pick([[1, 3], [1, 6], [5, 6], [1, 2]]); const ans = 60 * n1 / d1 + 60 * n2 / d2;
     return { prompt: `${n1}/${d1} h + ${n2}/${d2} h = __ min`, answer: String(ans), explain: `${60 * n1 / d1} min + ${60 * n2 / d2} min = ${ans} min.` }; },
   () => { const budget = pick([120, 150, 180]); const ds = [pick(DUR), pick(DUR), pick(DUR)]; const total = ds[0] + ds[1] + ds[2]; const over = total - budget;

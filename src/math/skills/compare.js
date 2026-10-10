@@ -34,7 +34,9 @@ function orderQ(items, prompt, explainExtra = '', wrongTags = {}) {
   };
 }
 function signQ(a, b, visual, tag = 'symbol-reversed') {
-  const sign = a < b ? '<' : a > b ? '>' : '=';
+  // a and b may arrive as formatted strings (e.g. "-0.45"); always compare numerically.
+  const na = Number(a), nb = Number(b);
+  const sign = na < nb ? '<' : na > nb ? '>' : '=';
   const q = {
     prompt: `Which sign goes in the box? ${neg(a)} [ ] ${neg(b)}`,
     answer: sign, choices: ['<', '>', '='],
@@ -46,7 +48,8 @@ function signQ(a, b, visual, tag = 'symbol-reversed') {
   return q;
 }
 function biggerQ(a, b, labelA, labelB, explain, wrongTag, visual, word = 'bigger') {
-  const ans = (word === 'bigger' || word === 'greater' ? a > b : a < b) ? labelA : labelB;
+  const wantBigger = !['less', 'smaller', 'fewer'].includes(word);
+  const ans = (wantBigger ? a > b : a < b) ? labelA : labelB;
   const other = ans === labelA ? labelB : labelA;
   const q = {
     prompt: `Which is ${word}: ${labelA} or ${labelB}?`,
@@ -98,7 +101,7 @@ L[1] = () => pick([
   },
   () => {
     const [a, b] = distinct(2, 0, 10);
-    return biggerQ(a, b, String(a), String(b), `${Math.min(a, b)} comes before ${Math.max(a, b)} when counting, so ${Math.min(a, b)} is less.`, null, { type: 'counters', count: Math.max(a, b) }, 'less');
+    return biggerQ(a, b, String(a), String(b), `${Math.min(a, b)} comes before ${Math.max(a, b)} when counting, so ${Math.min(a, b)} is less.`, null, { type: 'numberline', min: 0, max: 10, marks: [a, b] }, 'less');
   },
 ])();
 
@@ -241,7 +244,7 @@ L[5] = () => pick([
     const ans = Math.max(...vals);
     return {
       prompt: `Which is the biggest: ${vals.join(', ')}?`, answer: String(ans), choices: vals.map(String),
-      explain: `All have ${t} thousands, so compare the hundreds next. ${ans} is the biggest.`,
+      explain: `All have ${t} thousands, so compare the hundreds next, then the tens. ${ans} is the biggest.`,
     };
   },
   () => {
@@ -352,7 +355,7 @@ L[7] = () => pick([
     const more = n * 2 > d;
     return {
       prompt: `Is ${n}/${d} more or less than 1/2?`, answer: more ? 'more' : 'less', choices: ['more', 'less'],
-      visual: { type: 'numberline', min: 0, max: 1, step: 1 / d, highlight: n / d },
+      visual: { type: 'numberline', min: 0, max: 1, step: 1 / d, labels: 'fraction', den: d, highlight: n / d },
       explain: `Half of ${d} is ${d / 2}. ${n} is ${more ? 'more' : 'less'} than that, so ${n}/${d} is ${more ? 'more' : 'less'} than 1/2.`,
     };
   },
@@ -361,13 +364,13 @@ L[7] = () => pick([
     return orderQ(fs.map(([n, d, v]) => ({ label: `${n}/${d}`, value: v })), 'Fractions.', `As decimals: ${fs.map(([n, d, v]) => `${n}/${d} = ${v}`).join(', ')}.`);
   },
   () => {
-    const [n, d, v] = pick(FD);
-    const near = Math.abs(v - 0.5) < Math.abs(v - 1) ? (v < 0.5 ? '0' : '1/2') : '1';
+    // 1/4 and 3/4 sit exactly halfway between two benchmarks, so exclude them.
+    const [n, d, v] = pick(FD.filter((f) => f[2] !== 0.25 && f[2] !== 0.75));
     const closest = [['0', 0], ['1/2', 0.5], ['1', 1]].sort((p, q) => Math.abs(p[1] - v) - Math.abs(q[1] - v))[0][0];
     return {
       prompt: `Is ${n}/${d} closest to 0, 1/2 or 1?`, answer: closest, choices: ['0', '1/2', '1'],
-      visual: { type: 'numberline', min: 0, max: 1, step: 1 / d, highlight: v },
-      explain: `${n}/${d} = ${v}, which is closest to ${closest}.${near ? '' : ''}`,
+      visual: { type: 'numberline', min: 0, max: 1, step: 1 / d, labels: 'fraction', den: d, highlight: v },
+      explain: `${n}/${d} = ${v}, which is closest to ${closest}.`,
     };
   },
 ])();

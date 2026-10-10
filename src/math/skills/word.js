@@ -12,6 +12,9 @@ const num = (n) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 100)
 const two = () => shuffle(KIDS).slice(0, 2);
 const item = () => pick(ITEMS);
 const plural = (it, n) => (n === 1 ? it[0] : it[1]);
+const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+// Random proper fraction n/d in lowest terms (so prompts never say "4/8 of them").
+const properFrac = (d) => { let n; do n = randInt(1, d - 1); while (gcd(n, d) !== 1); return n; };
 
 const LEVELS = {
   1() {
@@ -154,7 +157,7 @@ const LEVELS = {
       const k = pick(KIDS);
       const take = randInt(1, each - 1);
       return {
-        prompt: `${total} ${it[1]} are shared equally by ${kids} kids. Then ${k} eats ${take} of ${k === 'Madeline' ? 'hers' : 'his'}. How many does ${k} have left?`,
+        prompt: `${total} ${it[1]} are shared equally by ${kids} kids. Then ${k} gives away ${take} of ${k === 'Madeline' ? 'hers' : 'his'}. How many does ${k} have left?`,
         answer: String(each - take),
         hint: 'Divide first, then subtract.',
         explain: `${total} ÷ ${kids} = ${each} each. ${each} − ${take} = ${each - take}.`,
@@ -272,7 +275,7 @@ const LEVELS = {
     const t = randInt(0, 3);
     const k = pick(KIDS);
     if (t === 0) {
-      const d = pick([3, 4, 5, 6, 8]), n = randInt(1, d - 1), unit = randInt(3, 12), whole = d * unit;
+      const d = pick([3, 4, 5, 6, 8]), n = properFrac(d), unit = randInt(3, 12), whole = d * unit;
       const came = randInt(2, 15);
       const left = n * unit;
       return {
@@ -315,9 +318,10 @@ const LEVELS = {
         explain: `${h} h ${m} min = ${total} min. ${total} − ${used} = ${total - used} min.`,
       };
     }
-    const d = pick([2, 3, 4, 5]), n = randInt(1, d - 1), unit = randInt(2, 10), total = d * unit;
+    const d = pick([2, 3, 4, 5]), n = properFrac(d), unit = randInt(2, 10), total = d * unit;
     const each = pick([2, 3, 4, 5]);
     const kept = total - n * unit;
+    if (kept < each) return LEVELS[7](); // avoid a degenerate "0 full pages" answer
     const friend = pick(KIDS.filter((x) => x !== k));
     return {
       prompt: `${k} has ${total} hockey cards and gives ${n}/${d} of them to ${friend}. ${k} puts the rest into pages that hold ${each} cards. How many full pages?`,
@@ -344,7 +348,7 @@ const LEVELS = {
     if (t === 1) {
       const [a, b] = pick([[1, 2], [1, 3], [1, 4], [1, 5], [2, 3], [2, 5], [3, 4], [3, 5], [4, 5], [5, 6]]);
       const unit = randInt(2, 8);
-      const [x, y] = pick([['flour', 'sugar'], ['red paint', 'blue paint'], ['apples', 'oranges'], ['boys', 'girls']]);
+      const [x, y] = pick([['flour', 'sugar'], ['red paint', 'blue paint'], ['oats', 'raisins'], ['milk', 'water']]);
       return {
         prompt: `A recipe uses ${x} and ${y} in the ratio ${a}:${b}. ${k} uses ${b * unit} cups of ${y}. How many cups of ${x}?`,
         answer: String(a * unit),
@@ -406,8 +410,9 @@ const LEVELS = {
       const s = half + gave; // ensure (s - gave) even
       const left = (s - gave) / 2;
       const bought = randInt(2, 10);
+      const friend = pick(KIDS.filter((x) => x !== k));
       return {
-        prompt: `${k} had some ${it[1]}. ${k} gave ${gave} to Luke, then lost half of the rest, then bought ${bought} more. Now ${k} has ${left + bought}. How many at the start?`,
+        prompt: `${k} had some ${it[1]}. ${k} gave ${gave} to ${friend}, then lost half of the rest, then bought ${bought} more. Now ${k} has ${left + bought}. How many at the start?`,
         answer: String(s),
         hint: 'Undo each step from the end: subtract, double, add.',
         explain: `${left + bought} − ${bought} = ${left}. Double it: ${left * 2}. Add back ${gave}: ${s}.`,

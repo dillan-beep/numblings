@@ -54,7 +54,7 @@ L[2] = () => pick([
     const seq = [0, 1, 2].map((i) => start + i * step);
     return {
       prompt: `What comes next? ${seq.join(', ')}, ?`, answer: String(start + 3 * step),
-      visual: { type: 'numberline', min: 0, max: Math.max(20, start + 4 * step), step: step === 1 ? 1 : step === 2 ? 2 : step, marks: seq },
+      visual: { type: 'numberline', min: 0, max: Math.max(20, Math.ceil((start + 4 * step) / step) * step), step, marks: seq },
       hint: `The numbers go up by ${step} each time.`,
       explain: `Each number is ${step} more than the one before. ${seq[2]} + ${step} = ${start + 3 * step}.`,
     };
@@ -171,7 +171,8 @@ L[3] = () => pick([
 // 4. Pattern rules; missing number to 100; input/output tables.
 L[4] = () => pick([
   () => {
-    const r = randInt(3, 12), x = randInt(5, 60), add = Math.random() < 0.6;
+    const r = randInt(3, 12), add = Math.random() < 0.6;
+    const x = add ? randInt(5, 60) : randInt(r + 1, 60); // no negative outputs at this level
     const ans = add ? x + r : x - r;
     return {
       prompt: `Rule: ${add ? '+' : '−'}${r}. Input ${x}, what is the output?`, answer: String(ans),
@@ -293,7 +294,10 @@ L[5] = () => pick([
     };
   },
   () => {
-    const a = randInt(2, 9), b = randInt(2, 9), p = a * b;
+    // a ≠ b, otherwise the "a × a" decoy would also be a member of the family.
+    const a = randInt(2, 9);
+    let b; do { b = randInt(2, 9); } while (b === a);
+    const p = a * b;
     const ans = pick([`${p} ÷ ${a} = ${b}`, `${p} ÷ ${b} = ${a}`, `${b} × ${a} = ${p}`]);
     return {
       prompt: `Which fact is in the same fact family as ${a} × ${b} = ${p}?`,
@@ -463,11 +467,11 @@ L[8] = () => pick([
     const r = a * x + b;
     return {
       prompt: `${a}${v} + ${b} = ${r}. What is ${v}?`, answer: String(x),
-      choices: choices(x, [r - b, num(r / a - b), x + b]),
+      choices: choices(x, [r - b, num(Math.round((r / a - b) * 10) / 10), x + b]),
       visual: balance([...Array(Math.min(a, 3)).fill(v), ...(a > 3 ? [`...×${a}`] : []), b], [r]),
       hint: `First take away ${b} from both sides, then divide by ${a}.`,
       explain: `${r} − ${b} = ${a * x}, then ${a * x} ÷ ${a} = ${x}.`,
-      wrongTags: { [String(r - b)]: 'forgot-to-divide', [num(r / a - b)]: 'undo-in-wrong-order' },
+      wrongTags: { [String(r - b)]: 'forgot-to-divide', [num(Math.round((r / a - b) * 10) / 10)]: 'undo-in-wrong-order' },
     };
   },
   () => {
@@ -515,7 +519,9 @@ L[8] = () => pick([
   },
   () => {
     const v = pick(VARS), b = randInt(1, 10), c = randInt(1, 10), bound = b + c;
-    const vals = shuffle([bound + randInt(1, 5), bound, bound - randInt(1, Math.min(bound, 5)), bound - randInt(6, 9)]);
+    // Exactly one value above the bound; the rest are at or below it (and never negative).
+    const below = []; while (below.length < 2) { const n = randInt(Math.max(0, bound - 9), bound - 1); if (!below.includes(n)) below.push(n); }
+    const vals = shuffle([bound + randInt(1, 5), bound, ...below]);
     const ans = Math.max(...vals);
     return {
       prompt: `Which value of ${v} makes ${v} − ${b} > ${c} true?`, answer: String(ans), choices: [...new Set(vals.map(String))],
@@ -542,7 +548,7 @@ L[9] = () => pick([
       prompt: `${co(a, v)} + ${b} = ${co(c, v)} + ${d}. What is ${v}?`, answer: String(x),
       visual: balance([...Array(Math.min(a, 3)).fill(v), ...(a > 3 ? [`...×${a}`] : []), b], [...Array(Math.min(c, 3)).fill(v), ...(c > 3 ? [`...×${c}`] : []), d]),
       hint: `Take ${co(c, v)} off both sides first.`,
-      explain: `Subtract ${co(c, v)} from both sides: ${co(a - c, v)} + ${b} = ${d}. Then ${co(a - c, v)} = ${d - b}, so ${v} = ${x}.`,
+      explain: `Subtract ${co(c, v)} from both sides: ${co(a - c, v)} + ${b} = ${d}. Then ${co(a - c, v)} = ${d - b}${a - c === 1 ? '' : `, so ${v} = ${d - b} ÷ ${a - c} = ${x}`}.`,
     };
   },
   () => {
@@ -605,7 +611,7 @@ L[9] = () => pick([
 L[10] = () => pick([
   () => {
     const v = pick(VARS), p = pick([0.5, 0.25, 0.2, 1.5, 2.5]), x = randInt(2, 20) * (p === 0.25 ? 4 : p === 0.2 ? 5 : 2), q = randInt(1, 12);
-    const r = num(p * x - q);
+    const r = neg(num(p * x - q));
     return {
       prompt: `${p}${v} − ${q} = ${r}. What is ${v}?`, answer: String(x),
       hint: `Add ${q} first, then divide by ${p}.`,
@@ -621,12 +627,13 @@ L[10] = () => pick([
     };
   },
   () => {
+    // Equation is (−a)·v + q = r with solution v = x (negative), so r = −a·x + q.
     const v = pick(VARS), a = randInt(2, 6), x = -randInt(1, 9), q = randInt(1, 15);
-    const r = a * x + q;
+    const r = -a * x + q;
     const wrong = String(-x);
     return {
       prompt: `${neg(-a)}${v} + ${q} = ${neg(r)}. What is ${v}?`, answer: neg(x),
-      choices: choices(neg(x), [wrong, neg(num((-r - q) / a)), neg(x + 1)]),
+      choices: choices(neg(x), [wrong, neg(x - 1), neg(x + 1)]),
       hint: `Subtract ${q}, then divide by −${a}. Watch the signs.`,
       explain: `${neg(r)} − ${q} = ${neg(r - q)}. Then ${neg(r - q)} ÷ (−${a}) = ${neg(x)}.`,
       wrongTags: { [wrong]: 'sign-error' },
@@ -663,10 +670,12 @@ L[10] = () => pick([
     if (y > 10) return L[10]();
     const eq = b === 0 ? `y = ${co(m, 'x')}` : `y = ${co(m, 'x')} + ${b}`;
     const ans = `(${x}, ${y})`;
+    // On y = x the swapped point (y, x) is the same point, so use a different decoy there.
+    const swapped = y === x ? [x + 1, y] : [y, x];
     return {
       prompt: `Which point is on the line ${eq}?`,
-      answer: ans, choices: choices(ans, [`(${x}, ${y + 1})`, `(${y}, ${x})`, `(${x}, ${m * x + b + m})`, `(${x + 1}, ${y})`]),
-      visual: { type: 'grid', w: 10, h: 10, points: [[x, y, 'A'], [x, y + 1, 'B'], [y, x, 'C']] },
+      answer: ans, choices: choices(ans, [`(${x}, ${y + 1})`, `(${swapped[0]}, ${swapped[1]})`, `(${x}, ${m * x + b + m})`, `(${x + 1}, ${y})`]),
+      visual: { type: 'grid', w: 10, h: 10, points: [[x, y, 'A'], [x, y + 1, 'B'], [swapped[0], swapped[1], 'C']] },
       explain: `When x = ${x}, y = ${m} × ${x}${b ? ' + ' + b : ''} = ${y}. So (${x}, ${y}) is on the line.`,
       wrongTags: { [`(${y}, ${x})`]: 'swapped-coordinates' },
     };

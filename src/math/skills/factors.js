@@ -198,7 +198,7 @@ function L4() {
   const big = fs[fs.length - 2];
   return {
     prompt: `What is the largest factor of ${n} that is smaller than ${n}?`, answer: String(big),
-    hint: `Try ${n} ÷ 2 first.`,
+    hint: `Divide ${n} by its smallest factor bigger than 1 (try ${n % 2 === 0 ? 2 : 3} first).`,
     explain: `${n} ÷ ${n / big} = ${big}, and nothing bigger divides ${n} except ${n} itself.`,
   };
 }
@@ -238,7 +238,9 @@ function L5() {
     };
   }
   if (t === 3) {
-    const f = randInt(3, 12), k = randInt(2, 8), a = f * k;
+    const f = randInt(3, 12);
+    let k; do { k = randInt(2, 8); } while (k === f);
+    const a = f * k;
     return {
       prompt: `Which number is a multiple of both ${f} and ${k}?`, answer: String(a),
       choices: mkChoices(a, [f + k, a + f, a - k].filter((w) => w % f !== 0 || w % k !== 0), () => { let w; do { w = randInt(6, 99); } while (w % f === 0 && w % k === 0); return w; }),
@@ -361,7 +363,7 @@ function L7() {
     return {
       prompt: `What is the LCM of ${a} and ${b}?`, answer: String(l),
       hint: 'LCM = lowest common multiple. List multiples until they match.',
-      explain: `Multiples of ${a}: ${[1, 2, 3, 4].map((i) => a * i).join(', ')}... Multiples of ${b}: ${[1, 2, 3].map((i) => b * i).join(', ')}... Lowest shared: ${l}.`,
+      explain: `Multiples of ${a}: ${Array.from({ length: l / a }, (_, i) => a * (i + 1)).join(', ')}. Multiples of ${b}: ${Array.from({ length: l / b }, (_, i) => b * (i + 1)).join(', ')}. Lowest shared: ${l}.`,
       wrongTags: { [a * b]: 'product-as-lcm' },
     };
   }
@@ -370,7 +372,7 @@ function L7() {
     const [a, b] = pick(pairs), g = gcd(a, b);
     return {
       prompt: `What is the GCF of ${a} and ${b}?`, answer: String(g),
-      choices: mkChoices(g, [1, g / 2, Math.min(a, b)], () => randInt(2, 12)),
+      choices: mkChoices(g, [1, g % 2 === 0 ? g / 2 : g * 2, Math.min(a, b)], () => randInt(2, 12)),
       hint: 'GCF = greatest common factor: the biggest number that divides both.',
       explain: `Factors of ${a}: ${factorsOf(a).join(', ')}. Factors of ${b}: ${factorsOf(b).join(', ')}. Greatest shared: ${g}.`,
       wrongTags: wt(g, { '1': 'gcf-always-one' }),
@@ -429,7 +431,7 @@ function L8() {
   const n = randInt(3, 12);
   return {
     prompt: `What is ${n} squared?`, answer: String(n * n),
-    visual: { type: 'array', rows: Math.min(n, 10), cols: Math.min(n, 10) },
+    visual: { type: 'array', rows: n, cols: n },
     hint: 'A square array: same number of rows and columns.',
     explain: `${n} x ${n} = ${n * n}.`,
     wrongTags: { [2 * n]: 'base-times-exponent' },
@@ -460,7 +462,8 @@ function L9() {
     };
   }
   if (t === 2) {
-    const m = randInt(11, 99), e = randInt(2, 4), ans = m * 10 ** (e - 1); // e.g. 4.5 x 10^3 = 4500
+    let m; do { m = randInt(11, 99); } while (m % 10 === 0); // e.g. 4.5 x 10^3 = 4500
+    const e = randInt(2, 4), ans = m * 10 ** (e - 1);
     const ms = `${Math.floor(m / 10)}.${m % 10}`;
     return {
       prompt: `${ms} x 10^${e} = ?`, answer: String(ans),

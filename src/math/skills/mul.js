@@ -27,10 +27,10 @@ function mkChoices(answer, wrongs, fill) {
   while (set.size < 4 && fill && tries++ < 60) { const s = String(fill()); if (s !== a) set.add(s); }
   return shuffle([...set]);
 }
-// a fraction n/d in lowest terms with n !== d
-function simpleFrac(maxN, minD, maxD) {
+// a proper fraction n/d in lowest terms
+function properFrac(minD, maxD) {
   let n, d;
-  do { n = randInt(1, maxN); d = randInt(minD, maxD); } while (gcd(n, d) !== 1 || n === d);
+  do { d = randInt(minD, maxD); n = randInt(1, d - 1); } while (gcd(n, d) !== 1);
   return [n, d];
 }
 const eq = (raw, simplified) => (raw === simplified ? raw : `${raw} = ${simplified}`);
@@ -136,7 +136,9 @@ function L3() {
     };
   }
   if (t === 2) {
-    const f = pick([2, 5, 10]), n = randInt(3, 10), a = f * n;
+    const f = pick([2, 5, 10]);
+    let n; do { n = randInt(3, 10); } while (n === f);
+    const a = f * n;
     return {
       prompt: `If ${f} x ${n} = ${a}, what is ${n} x ${f}?`, answer: String(a),
       hint: 'Turn the array around: the total stays the same.',
@@ -177,7 +179,7 @@ function L4() {
   const [x, y] = Math.random() < 0.5 ? [f, n] : [n, f];
   const t = randInt(0, 3);
   const hint = f === 3 ? '3s are the 2s plus one more group.' : f === 4 ? '4s are double the 2s.' : '6s are double the 3s.';
-  if (t === 0) return { prompt: `${x} x ${y} = ?`, answer: String(a), hint, explain: doubleExplain(f, n), visual: { type: 'array', rows: f, cols: n } };
+  if (t === 0) return { prompt: `${x} x ${y} = ?`, answer: String(a), hint, explain: doubleExplain(f, n), visual: { type: 'array', rows: x, cols: y } };
   if (t === 1) return { prompt: `${x} x ${y} = ?`, answer: String(a), hint, explain: doubleExplain(f, n) };
   if (t === 2) return {
     prompt: `__ x ${f} = ${a}`, answer: String(n),
@@ -208,7 +210,9 @@ function L5() {
   if (t === 3) { x = randInt(2, 10); y = randInt(2, 10); }
   else { x = pick([7, 8, 9]); y = randInt(2, 10); if (Math.random() < 0.5) [x, y] = [y, x]; }
   const a = x * y;
-  const hint = (x === 9 || y === 9) ? 'Use 10 times the number, then take one group away.' : 'Split one factor into 5 and the rest.';
+  const hint = (x === 9 || y === 9) ? 'Use 10 times the number, then take one group away.'
+    : (x === 7 || y === 7 || x === 8 || y === 8) ? 'Split one factor into 5 and the rest.'
+      : (x === 6 || y === 6) ? '6s are double the 3s.' : 'Use a fact you know.';
   if (t === 0) return { prompt: `${x} x ${y} = ?`, answer: String(a), hint, explain: strategyExplain(x, y) };
   if (t === 1) return {
     prompt: `${x} x ${y} = ?`, answer: String(a),
@@ -248,7 +252,7 @@ function L6() {
     return {
       prompt: `${x} x ${y} = ?`, answer: String(a),
       hint: 'Multiply the front digits, then put the zeros back.',
-      explain: `${other} x ${m / p} = ${other * (m / p)}, then ${String(p).length - 1} zeros: ${a}.`,
+      explain: `${other} x ${m / p} = ${other * (m / p)}, then ${String(p).length - 1} zero${p > 10 ? 's' : ''}: ${a}.`,
       wrongTags: { [a / 10]: 'lost-a-zero', [a * 10]: 'extra-zero' },
     };
   }
@@ -273,7 +277,9 @@ function L6() {
 function L7() {
   const t = randInt(0, 3);
   if (t === 0 || t === 1) {
-    const x = randInt(12, 49), y = randInt(12, 49), a = x * y;
+    let x, y;
+    do { x = randInt(12, 49); y = randInt(12, 49); } while (x % 10 === 0 || y % 10 === 0);
+    const a = x * y;
     const xt = Math.floor(x / 10) * 10, xo = x % 10, yt = Math.floor(y / 10) * 10, yo = y % 10;
     const wrong = (xt / 10) * (yt / 10) + xt * yo + xo * yt + xo * yo; // forgot to scale tens x tens
     const q = {
@@ -326,15 +332,17 @@ function L8() {
   }
   // decimal x whole: one or two decimal places
   const places = pick([1, 1, 2]);
-  const scaled = places === 1 ? randInt(3, 99) : randInt(101, 999);
+  let scaled;
+  do { scaled = places === 1 ? randInt(3, 99) : randInt(101, 999); } while (scaled % 10 === 0);
   const w = randInt(2, 9);
   const prod = scaled * w;
   const ds = dec(scaled, places), a = dec(prod, places);
+  const aFull = (prod / 10 ** places).toFixed(places); // e.g. 48.0, so the child sees the place being counted
   const [x, y] = Math.random() < 0.5 ? [ds, w] : [w, ds];
   const q = {
     prompt: `${x} x ${y} = ?`, answer: a,
     hint: `Multiply as whole numbers, then count ${places} decimal place${places > 1 ? 's' : ''}.`,
-    explain: `${scaled} x ${w} = ${prod}. ${ds} has ${places} decimal place${places > 1 ? 's' : ''}, so ${a}.`,
+    explain: `${scaled} x ${w} = ${prod}. ${ds} has ${places} decimal place${places > 1 ? 's' : ''}, so ${eq(aFull, a)}.`,
     wrongTags: { [dec(prod, places + 1)]: 'decimal-place', [dec(prod, places - 1)]: 'decimal-place' },
   };
   if (t === 3) { q.choices = mkChoices(a, [dec(prod, places + 1), dec(prod, places - 1), String(prod)], () => dec(randInt(10, 999), places)); q.wrongTags = wt(a, q.wrongTags); }
@@ -355,17 +363,19 @@ function L9() {
     };
   }
   if (t === 1) {
-    const x = randInt(11, 49), y = randInt(2, 9), p = x * y; // e.g. 1.2 x 0.5
+    let x; do { x = randInt(11, 49); } while (x % 10 === 0); // e.g. 1.2 x 0.5
+    const y = randInt(2, 9), p = x * y;
     const a = dec(p, 2);
+    const aFull = (p / 100).toFixed(2);
     return {
       prompt: `${dec(x, 1)} x 0.${y} = ?`, answer: a,
       hint: 'Multiply as whole numbers, then count two decimal places.',
-      explain: `${x} x ${y} = ${p}. Two decimal places in total, so ${a}.`,
+      explain: `${x} x ${y} = ${p}. Two decimal places in total, so ${eq(aFull, a)}.`,
       wrongTags: { [dec(p, 1)]: 'decimal-place' },
     };
   }
   if (t === 2) {
-    const w = randInt(2, 9), [n, d] = simpleFrac(5, 2, 8);
+    const w = randInt(2, 9), [n, d] = properFrac(2, 8);
     const a = frac(w * n, d);
     const [x, y] = Math.random() < 0.5 ? [`${w}`, `${n}/${d}`] : [`${n}/${d}`, `${w}`];
     return {
@@ -374,7 +384,7 @@ function L9() {
       explain: `${w} x ${n}/${d} = ${eq(`${w * n}/${d}`, a)}.`,
     };
   }
-  const [n1, d1] = simpleFrac(5, 2, 6), [n2, d2] = simpleFrac(5, 2, 6);
+  const [n1, d1] = properFrac(2, 6), [n2, d2] = properFrac(2, 6);
   const a = frac(n1 * n2, d1 * d2);
   return {
     prompt: `${n1}/${d1} x ${n2}/${d2} = ?`, answer: a,
