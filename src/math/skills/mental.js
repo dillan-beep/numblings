@@ -110,7 +110,7 @@ function level3() {
   return q(`Ten and some more: ${swap ? `${a} + 10` : `10 + ${a}`} = ?`, 10 + a, {
     visual: { type: 'tenframe', counts: [10, a] },
     hint: 'Ten and some more is a teen number.',
-    explain: `10 + ${a} = ${10 + a}. A ten and ${a} ones.`,
+    explain: `10 + ${a} = ${10 + a}. A ten and ${a} ${a === 1 ? 'one' : 'ones'}.`,
     wrongTags: { [String(a + 1)]: 'tens-vs-ones' },
   });
 }
@@ -158,15 +158,15 @@ function level4() {
     const a = randInt(41, 99), t = randInt(1, Math.floor(a / 10) - 1) * 10;
     return q(`Subtract tens: ${a} - ${t} = ?`, a - t, {
       visual: { type: 'base10', value: a },
-      hint: `Count back ${t / 10} tens. The ones digit stays ${a % 10}.`,
-      explain: `${a} - ${t}: ${Math.floor(a / 10)} tens - ${t / 10} tens = ${Math.floor(a / 10) - t / 10} tens, ones stay ${a % 10}. Answer ${a - t}.`,
+      hint: `Count back ${t / 10} ${t === 10 ? 'ten' : 'tens'}. The ones digit stays ${a % 10}.`,
+      explain: `${a} - ${t}: ${Math.floor(a / 10)} tens - ${t / 10} ${t === 10 ? 'ten' : 'tens'} = ${Math.floor(a / 10) - t / 10} ${Math.floor(a / 10) - t / 10 === 1 ? 'ten' : 'tens'}, ones stay ${a % 10}. Answer ${a - t}.`,
       wrongTags: { [String(a - t / 10)]: 'subtracting-tens-from-ones' },
     });
   }
   const a = randInt(11, 69), t = randInt(1, Math.floor((99 - a) / 10)) * 10;
   return q(`Add tens: ${a} + ${t} = ?`, a + t, {
     visual: { type: 'base10', value: a },
-    hint: `Count on ${t / 10} tens from ${a}.`,
+    hint: `Count on ${t / 10} ${t === 10 ? 'ten' : 'tens'} from ${a}.`,
     explain: `${a} + ${t}: count on by tens, ${Array.from({ length: t / 10 }, (_, i) => a + (i + 1) * 10).join(', ')}. Answer ${a + t}.`,
     wrongTags: { [String(a + t / 10)]: 'adding-tens-to-ones' },
   });
@@ -194,15 +194,15 @@ function level5() {
   const explain = `${jumps.map((j) => `${j.from} to ${j.to} is ${j.size}`).join(', ')}. ${jumps.map((j) => j.size).join(' + ')} = ${a - b}.`;
   if (kind === 'countUpStory') {
     return q(`Count up: Mia has ${b} points and needs ${a}. How many more points?`, a - b, {
-      visual: { type: 'numberline', min: b - 5, max: a + 5, marks: [b, nextTen, lastTen, a] },
-      hint: `Jump from ${b} up to ${nextTen}, then by tens, then to ${a}.`,
+      visual: { type: 'numberline', min: b - 5, max: a + 5, marks: stops },
+      hint: `Jump from ${b} up to ${stops.slice(1).join(', then to ')}.`,
       explain,
       wrongTags: { [String(a - b - j1)]: 'lost-partial-sum' },
     });
   }
   return q(`Count up: ${a} - ${b} = ?`, a - b, {
-    visual: { type: 'numberline', min: b - 5, max: a + 5, marks: [b, nextTen, lastTen, a] },
-    hint: `Start at ${b}. Jump to ${nextTen}, then to ${lastTen}, then to ${a}. Add the jumps.`,
+    visual: { type: 'numberline', min: b - 5, max: a + 5, marks: stops },
+    hint: `Start at ${b}. Jump to ${stops.slice(1).join(', then to ')}. Add the jumps.`,
     explain,
     wrongTags: { [String(a - b - j1)]: 'lost-partial-sum', [String(a - b + j1)]: 'lost-partial-sum' },
   });
@@ -242,9 +242,12 @@ function level6() {
   }
   if (kind === 'doubleHalve') {
     const pairs = [[16, 5], [14, 5], [18, 5], [12, 5], [24, 5], [36, 5], [15, 4], [25, 4], [35, 4], [45, 4], [8, 25], [6, 25], [12, 25], [16, 25], [14, 50], [18, 50]];
-    const [a, b] = pick(pairs), swap = Math.random() < 0.5;
+    const [p, r] = pick(pairs), swap = Math.random() < 0.5;
+    // Always halve the even factor so the strategy stays in whole numbers (25 x 4 -> 50 x 2, not 12.5 x 8).
+    const [a, b] = p % 2 === 0 ? [p, r] : [r, p];
     return q(`Doubling and halving: ${swap ? `${b} x ${a}` : `${a} x ${b}`} = ?`, a * b, {
-      visual: { type: 'array', rows: Math.min(b, 12), cols: Math.min(a, 12) },
+      // The array visual is capped at 12 x 12, so only show it when it can show the real product.
+      visual: a <= 12 && b <= 12 ? { type: 'array', rows: b, cols: a } : undefined,
       hint: `Halve ${a} and double ${b}: ${a / 2} x ${b * 2}.`,
       explain: `${a} x ${b} = ${a / 2} x ${b * 2} = ${a * b}. Halving one and doubling the other keeps the product.`,
       wrongTags: { [String((a / 2) * b)]: 'halved-only', [String(a * b * 2)]: 'doubled-only' },
@@ -253,7 +256,9 @@ function level6() {
   if (kind === 'half') {
     const n = randInt(11, 99) * 2 + pick([0, 0, 2, 4]);
     const N = Math.min(n, 998) - (Math.min(n, 998) % 2);
-    const tensPart = Math.floor(N / 10) * 10 - (Math.floor(N / 10) % 2 === 1 ? 10 : 0), onesPart = N - tensPart;
+    let tensPart = Math.floor(N / 10) * 10 - (Math.floor(N / 10) % 2 === 1 ? 10 : 0);
+    if (tensPart === N) tensPart -= 20; // keep a real second part (e.g. 40 -> 20 + 20, not 40 + 0)
+    const onesPart = N - tensPart;
     return q(`Halving: half of ${N} = ?`, N / 2, {
       hint: `Split ${N} into ${tensPart} + ${onesPart}, then halve each part.`,
       explain: `Half of ${tensPart} is ${tensPart / 2}, half of ${onesPart} is ${onesPart / 2}. ${tensPart / 2} + ${onesPart / 2} = ${N / 2}.`,
@@ -284,7 +289,7 @@ function level7() {
   if (kind === 'doubleDouble') {
     const a = randInt(6, 25);
     return q(`Double double: 4 x ${a} = ?`, 4 * a, {
-      visual: { type: 'array', rows: 4, cols: Math.min(a, 12) },
+      visual: a <= 12 ? { type: 'array', rows: 4, cols: a } : undefined, // array is capped at 12 columns
       hint: `Double ${a} is ${2 * a}. Double again.`,
       explain: `4 x ${a}: double ${a} = ${2 * a}, double ${2 * a} = ${4 * a}.`,
       wrongTags: { [String(2 * a)]: 'doubled-once', [String(2 * a + 2)]: 'added-instead-of-doubling' },
@@ -309,7 +314,7 @@ function level7() {
   const a = pick([12, 13, 14, 15, 16, 17, 18, 11, 19]), b = randInt(3, 9), swap = Math.random() < 0.5;
   const extra = a - 10;
   return q(`Split it: ${swap ? `${b} x ${a}` : `${a} x ${b}`} = ?`, a * b, {
-    visual: { type: 'array', rows: b, cols: 12 },
+    visual: a <= 12 ? { type: 'array', rows: b, cols: a } : undefined, // array is capped at 12 columns
     hint: `${a} = 10 + ${extra}. Do 10 x ${b} and ${extra} x ${b}, then add.`,
     explain: `${a} x ${b} = 10 x ${b} + ${extra} x ${b} = ${10 * b} + ${extra * b} = ${a * b}.`,
     wrongTags: { [String(10 * b + extra)]: 'split-forgot-multiply', [String(10 * b)]: 'lost-partial-product' },
@@ -433,7 +438,8 @@ function level9() {
   const a = pick([19, 21, 29, 31, 39, 41, 49, 51, 59, 61, 79, 81, 98, 102]), b = pick([9, 11, 19, 21, 31, 29, 41, 51, 6, 7, 8]);
   const ra = Math.round(a / 10) * 10, rb = b < 10 ? b : Math.round(b / 10) * 10; // single digits stay as they are
   const est = ra * rb;
-  const wrong = uniq([est * 10, est / 10, est * 2, Math.round(est / 2), est + ra]).filter((w) => Number(w) !== est && Number(w) > 0);
+  // Distractors must all be far from the exact product (which is within ~16% of est), so "closest" has one answer.
+  const wrong = uniq([est * 10, est / 10, est * 2, Math.round(est / 2), est * 4]).filter((w) => Number(w) !== est && Number(w) > 0);
   const choices = shuffle(uniq([est, ...shuffle(wrong).slice(0, 3)]));
   return q(`Estimate: ${a} x ${b} is closest to which number?`, est, {
     choices,
@@ -449,7 +455,7 @@ function level10() {
   if (kind === 'square') {
     const n = randInt(6, 15);
     return q(`Squares: ${n} squared = ?`, n * n, {
-      visual: { type: 'array', rows: Math.min(n, 12), cols: Math.min(n, 12) },
+      visual: n <= 12 ? { type: 'array', rows: n, cols: n } : undefined, // array is capped at 12 x 12
       hint: `${n} squared means ${n} x ${n}.`,
       explain: n > 10
         ? `${n} x ${n} = (10 + ${n - 10}) x ${n} = ${10 * n} + ${(n - 10) * n} = ${n * n}.`
@@ -468,7 +474,7 @@ function level10() {
   if (kind === 'root') {
     const n = randInt(4, 15);
     return q(`Square root: the square root of ${n * n} = ?`, n, {
-      visual: { type: 'array', rows: Math.min(n, 12), cols: Math.min(n, 12) },
+      visual: n <= 12 ? { type: 'array', rows: n, cols: n } : undefined, // array is capped at 12 x 12
       hint: `Which number times itself makes ${n * n}?`,
       explain: `${n} x ${n} = ${n * n}, so the square root of ${n * n} is ${n}.`,
       wrongTags: { [String((n * n) / 2)]: 'root-as-half', [String(n + 1)]: 'square-off-by-one' },
@@ -497,12 +503,14 @@ function level10() {
   }
   // estimate a sum/difference: choice
   const a = randInt(1800, 9900) + pick([0, 50, 99]), b = randInt(1200, 8800) + pick([0, 49, 95]);
-  const op = Math.random() < 0.5 ? '+' : '-';
+  // Subtraction only when the numbers are far enough apart that the estimate is not 0 or tiny.
+  const op = Math.random() < 0.5 && Math.abs(a - b) >= 1500 ? '-' : '+';
   const [x, y] = op === '-' ? [Math.max(a, b), Math.min(a, b)] : [a, b];
   const rx = Math.round(x / 1000) * 1000, ry = Math.round(y / 1000) * 1000;
   const est = op === '+' ? rx + ry : rx - ry;
   const exact = op === '+' ? x + y : x - y;
-  const wrongs = uniq([est + 1000, est - 1000, est + 2000, est * 10, Math.round(est / 10)]).filter((w) => Number(w) !== est && Number(w) > 0);
+  // Rounding error is under 1000, so distractors sit at least 3000 away: the taught estimate is also the closest choice.
+  const wrongs = uniq([est + 3000, est - 3000, est + 5000, est * 10, Math.round(est / 10)]).filter((w) => Number(w) !== est && Number(w) > 0);
   const choices = shuffle(uniq([est, ...shuffle(wrongs).slice(0, 3)]));
   return q(`Estimate: ${fmt(x)} ${op} ${fmt(y)} is about ?`, est, {
     choices,

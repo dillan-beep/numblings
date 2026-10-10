@@ -56,7 +56,7 @@ function level2() {
     return q(`${a} + __ = 10`, 10 - a, {
       visual: { type: 'tenframe', count: a },
       hint: 'How many empty spaces are left in the ten frame?',
-      explain: `The frame shows ${a} dots and ${10 - a} empty spaces. ${a} + ${10 - a} = 10.`,
+      explain: `The frame shows ${a} ${a === 1 ? 'dot' : 'dots'} and ${10 - a} empty ${10 - a === 1 ? 'space' : 'spaces'}. ${a} + ${10 - a} = 10.`,
     });
   }
   if (kind === 'makeTenFront') {
@@ -144,7 +144,7 @@ function level4() {
     return q(`${a} + ${bb} = ?`, a + bb, {
       visual: { type: 'base10', value: a },
       hint: 'Add the ones only. The tens stay the same.',
-      explain: `${a} + ${bb}: ${a % 10} ones + ${bb} ones = ${(a % 10) + bb} ones, so ${a + bb}.`,
+      explain: `${a} + ${bb}: ${a % 10} ${a % 10 === 1 ? 'one' : 'ones'} + ${bb} ${bb === 1 ? 'one' : 'ones'} = ${(a % 10) + bb} ones, so ${a + bb}.`,
       wrongTags: { [String(a + bb * 10)]: 'adding-ones-to-tens' },
     });
   }
@@ -155,9 +155,11 @@ function level4() {
     return q(`${a} + ${safeB} = ?`, a + safeB, {
       visual: { type: 'base10', value: a },
       hint: regroups ? `Jump to the next ten first: ${a} + ${toTen} = ${a + toTen}.` : 'Add the ones.',
-      explain: regroups
+      explain: regroups && safeB > toTen
         ? `${a} + ${toTen} = ${a + toTen}, then ${a + toTen} + ${safeB - toTen} = ${a + safeB}.`
-        : `${a} + ${safeB} = ${a + safeB}.`,
+        : regroups
+          ? `${a % 10} + ${safeB} = 10, so ${a} + ${safeB} lands exactly on the next ten: ${a + safeB}.`
+          : `${a} + ${safeB} = ${a + safeB}.`,
       wrongTags: { [String(a + safeB - 10)]: 'forgot-regroup-ten' },
     });
   }
@@ -166,7 +168,7 @@ function level4() {
     return q(`${a} + __ = ${a + t}`, t, {
       visual: { type: 'base10', value: a },
       hint: 'Only the tens digit changed.',
-      explain: `${a} to ${a + t}: the tens went from ${Math.floor(a / 10)} to ${Math.floor((a + t) / 10)}, that is ${t / 10} tens = ${t}.`,
+      explain: `${a} to ${a + t}: the tens went from ${Math.floor(a / 10)} to ${Math.floor((a + t) / 10)}, that is ${t / 10} ${t === 10 ? 'ten' : 'tens'} = ${t}.`,
       wrongTags: { [String(t / 10)]: 'tens-as-ones' },
     });
   }
@@ -174,7 +176,7 @@ function level4() {
     const a = randInt(12, 69), t = randInt(1, Math.floor((99 - a) / 10)) * 10;
     return q(`A jar has ${a} marbles. ${t} more are added. How many now?`, a + t, {
       visual: { type: 'base10', value: a },
-      hint: `${t} is ${t / 10} tens. Count on by tens.`,
+      hint: `${t} is ${t / 10} ${t === 10 ? 'ten' : 'tens'}. Count on by tens.`,
       explain: `${a} + ${t}: count on by tens, ${Array.from({ length: t / 10 }, (_, i) => a + (i + 1) * 10).join(', ')}. Answer ${a + t}.`,
       wrongTags: { [String(a + t / 10)]: 'adding-tens-to-ones' },
     });
@@ -183,8 +185,8 @@ function level4() {
   const swap = Math.random() < 0.3;
   return q(swap ? `${t} + ${a} = ?` : `${a} + ${t} = ?`, a + t, {
     visual: { type: 'base10', value: a },
-    hint: `${t} is ${t / 10} tens. Add them to the tens of ${a}; the ones stay ${a % 10}.`,
-    explain: `${a} + ${t}: ${Math.floor(a / 10)} tens + ${t / 10} tens = ${Math.floor(a / 10) + t / 10} tens, ones stay ${a % 10}. Answer ${a + t}.`,
+    hint: `${t} is ${t / 10} ${t === 10 ? 'ten' : 'tens'}. Add ${t === 10 ? 'it' : 'them'} to the tens of ${a}; the ones stay ${a % 10}.`,
+    explain: `${a} + ${t}: ${Math.floor(a / 10)} ${Math.floor(a / 10) === 1 ? 'ten' : 'tens'} + ${t / 10} ${t === 10 ? 'ten' : 'tens'} = ${Math.floor(a / 10) + t / 10} tens, ones stay ${a % 10}. Answer ${a + t}.`,
     wrongTags: { [String(a + t / 10)]: 'adding-tens-to-ones' },
   });
 }
@@ -204,7 +206,9 @@ function level5() {
     return q(`${a} + __ = ${total}`, total - a, {
       visual: { type: 'numberline', min: a - 5, max: total + 5, marks: [a, total] },
       hint: `Count up from ${a} to the next ten, then by tens, then to ${total}.`,
-      explain: `Count up: ${a} to ${Math.ceil(a / 10) * 10} is ${Math.ceil(a / 10) * 10 - a}, then on to ${total} is ${total - Math.ceil(a / 10) * 10} more. Total jump ${total - a}.`,
+      explain: a % 10 === 0
+        ? `Count up from ${a} to ${total}: that is ${total - a}. Check: ${a} + ${total - a} = ${total}.`
+        : `Count up: ${a} to ${Math.ceil(a / 10) * 10} is ${Math.ceil(a / 10) * 10 - a}, then on to ${total} is ${total - Math.ceil(a / 10) * 10} more. Total jump ${total - a}.`,
     });
   }
   // Always regroup in the ones: a's ones digit is 1-9 and b's ones digit is at least 10 - that.
@@ -264,12 +268,15 @@ function level6() {
     return q(`${a} + __ = ${total}`, total - a, {
       visual: { type: 'numberline', min: a - 10, max: total + 10, marks: [a, total] },
       hint: `Count up from ${a} to ${total} by hundreds, tens, then ones.`,
-      explain: `Count up: ${a} to ${Math.ceil(a / 100) * 100} is ${Math.ceil(a / 100) * 100 - a}, then ${Math.ceil(a / 100) * 100} to ${total} is ${total - Math.ceil(a / 100) * 100}. Total ${total - a}.`,
+      explain: a % 100 === 0
+        ? `Count up from ${a} to ${total}: that is ${total - a}. Check: ${a} + ${total - a} = ${total}.`
+        : `Count up: ${a} to ${Math.ceil(a / 100) * 100} is ${Math.ceil(a / 100) * 100 - a}, then ${Math.ceil(a / 100) * 100} to ${total} is ${total - Math.ceil(a / 100) * 100}. Total ${total - a}.`,
     });
   }
-  // standard with at least one regroup
-  let a = randInt(145, 999), b = randInt(145, 999);
-  if ((a % 10) + (b % 10) < 10 && (Math.floor(a / 10) % 10) + (Math.floor(b / 10) % 10) < 10) b = b + (10 - (b % 10)) + (9 - (b % 10)); // nudge ones to regroup
+  // standard with at least one regroup: a always has a nonzero ones digit, and b's ones digit is chosen so the ones column carries
+  const a = randInt(14, 99) * 10 + randInt(1, 9);
+  let b = randInt(145, 999);
+  if ((a % 10) + (b % 10) < 10 && (Math.floor(a / 10) % 10) + (Math.floor(b / 10) % 10) < 10) b = b - (b % 10) + randInt(10 - (a % 10), 9); // nudge ones to regroup
   b = Math.min(b, 999);
   const total = a + b;
   const onesSum = (a % 10) + (b % 10), tensSum = Math.floor(a / 10) % 10 + Math.floor(b / 10) % 10 + (onesSum >= 10 ? 1 : 0);
@@ -290,7 +297,9 @@ function level7() {
     const ans = ((a + b) / 100).toFixed(2);
     return q(`${money(a)} + ${money(b)} = ?  (answer in dollars, like 4.25)`, ans, {
       hint: 'Line up the decimal points. Cents add like a two-digit number.',
-      explain: `${money(a)} + ${money(b)}: cents ${a % 100} + ${b % 100} = ${(a % 100) + (b % 100)}, dollars ${Math.floor(a / 100)} + ${Math.floor(b / 100)}. Total $${ans}.`,
+      explain: (a % 100) + (b % 100) >= 100
+        ? `${money(a)} + ${money(b)}: cents ${a % 100} + ${b % 100} = ${(a % 100) + (b % 100)}, which is 1 dollar and ${(a % 100) + (b % 100) - 100} cents. Dollars ${Math.floor(a / 100)} + ${Math.floor(b / 100)} + 1 = ${Math.floor(a / 100) + Math.floor(b / 100) + 1}. Total $${ans}.`
+        : `${money(a)} + ${money(b)}: cents ${a % 100} + ${b % 100} = ${(a % 100) + (b % 100)}, dollars ${Math.floor(a / 100)} + ${Math.floor(b / 100)} = ${Math.floor(a / 100) + Math.floor(b / 100)}. Total $${ans}.`,
       wrongTags: { [((a + b) / 100 - 1).toFixed(2)]: 'forgot-carry-dollar' },
     });
   }
@@ -330,9 +339,21 @@ function level7() {
 // ---------- Level 8: decimals (tenths, hundredths) and like-denominator fractions ----------
 function level8() {
   const kind = pick(['dec', 'dec', 'decMixed', 'frac', 'frac', 'fracWhole', 'decStory']);
-  if (kind === 'frac' || kind === 'fracWhole') {
+  if (kind === 'fracWhole') {
+    // The sum is exactly one whole. Typed "1" and "4/4" cannot both be accepted by the checker, so use choices.
     const d = pick([4, 5, 6, 8, 10, 12]);
-    const n1 = randInt(1, d - 1), n2 = kind === 'fracWhole' ? d - n1 : randInt(1, d - n1 - 1 > 0 ? d - n1 - 1 : 1);
+    const n1 = randInt(1, d - 1), n2 = d - n1;
+    return q(`${n1}/${d} + ${n2}/${d} = ?`, '1', {
+      choices: shuffle(['1', `${d}/${2 * d}`, `${d - 1}/${d}`, '2']),
+      visual: { type: 'fractionbar', bars: [{ parts: d, shaded: n1 }, { parts: d, shaded: n2 }] },
+      hint: 'The pieces are the same size, so only count the pieces. The bottom number stays.',
+      explain: `${n1}/${d} + ${n2}/${d} = ${d}/${d}, and ${d} out of ${d} pieces is 1 whole.`,
+      wrongTags: { [`${d}/${2 * d}`]: 'add-denominators' },
+    });
+  }
+  if (kind === 'frac') {
+    const d = pick([4, 5, 6, 8, 10, 12]);
+    const n1 = randInt(1, d - 2), n2 = randInt(1, d - n1 - 1); // n1 + n2 < d, so the answer is a proper fraction
     const ans = frac(n1 + n2, d);
     return q(`${n1}/${d} + ${n2}/${d} = ?  (write a fraction like 3/4)`, ans, {
       visual: { type: 'fractionbar', bars: [{ parts: d, shaded: n1 }, { parts: d, shaded: n2 }] },
@@ -398,21 +419,29 @@ function level9() {
     const ans = mixedStr(num, L);
     const improper = frac(num, L);
     const addDen = mixedStr((w1 + w2) * (d1 + d2) + n1 + n2, d1 + d2);
-    const forgotCarry = `${w1 + w2} ${frac((n1 * L) / d1 + (n2 * L) / d2, L)}`; // keeps an improper fraction part
-    const choices = shuffle(uniq([ans, addDen, forgotCarry, mixedStr(num + L / d2, L), mixedStr(num - L, L)]).slice(0, 4));
+    const fracSum = (n1 * L) / d1 + (n2 * L) / d2;
+    // "Forgot the carried whole" distractor: the fraction part was regrouped but the extra 1 was never added to the wholes.
+    // (An un-regrouped improper form like "7 6/4" must NOT be offered: it equals the answer, so it would be a second correct choice.)
+    const forgotCarry = fracSum >= L ? mixedStr((w1 + w2) * L + (fracSum - L), L) : null;
+    const choices = shuffle(uniq([ans, addDen, forgotCarry, mixedStr(num + L / d2, L), mixedStr(num - L, L)].filter(Boolean)).slice(0, 4));
+    const fracText = fracSum % L === 0 ? `${fracSum}/${L} = ${fracSum / L} whole` : fracSum > L ? `${fracSum}/${L} = ${mixedStr(fracSum, L)}` : frac(fracSum, L);
     return q(`${w1} ${n1}/${d1} + ${w2} ${n2}/${d2} = ?`, ans, {
       choices: choices.includes(ans) ? choices : shuffle(uniq([ans, ...choices.slice(0, 3)])),
       visual: { type: 'fractionbar', bars: [{ parts: d1, shaded: n1 }, { parts: d2, shaded: n2 }] },
-      hint: `Add the wholes: ${w1 + w2}. Then add the fractions using ${L}ths.`,
-      explain: `Wholes: ${w1} + ${w2} = ${w1 + w2}. Fractions: ${n1}/${d1} + ${n2}/${d2} = ${frac((n1 * L) / d1 + (n2 * L) / d2, L)}. Together ${ans} (that is ${improper}).`,
-      wrongTags: { [addDen]: 'add-denominators', [forgotCarry]: 'improper-not-regrouped' },
+      hint: `Add the wholes: ${w1 + w2}. Then add the fractions using ${L === 2 ? 'halves' : L === 4 ? 'quarters' : `${L}ths`}.`,
+      explain: `Wholes: ${w1} + ${w2} = ${w1 + w2}. Fractions: ${n1}/${d1} + ${n2}/${d2} = ${fracText}. Together ${ans}${num % L === 0 ? '' : ` (that is ${improper})`}.`,
+      wrongTags: forgotCarry ? { [addDen]: 'add-denominators', [forgotCarry]: 'forgot-carried-whole' } : { [addDen]: 'add-denominators' },
     });
   }
   // unlike denominators
   const pairs = [[2, 3], [2, 5], [3, 4], [2, 4], [3, 6], [4, 6], [4, 8], [3, 5], [5, 10], [4, 12], [6, 12], [4, 10]];
   const [d1, d2] = shuffle(pick(pairs));
-  const n1 = randInt(1, d1 - 1), n2 = randInt(1, d2 - 1);
   const L = (d1 * d2) / gcd(d1, d2);
+  let n1 = randInt(1, d1 - 1), n2 = randInt(1, d2 - 1);
+  // Avoid a sum of exactly 1 (e.g. 1/2 + 2/4): the checker cannot accept both "1" and "4/4".
+  if ((n1 * L) / d1 + (n2 * L) / d2 === L) {
+    if (n2 > 1) n2 -= 1; else if (n1 > 1) n1 -= 1; else n1 += 1; // one of d1, d2 is at least 3, so this stays in range
+  }
   const top = (n1 * L) / d1 + (n2 * L) / d2;
   const ans = frac(top, L);
   const hintText = kind === 'unlikeHint' ? `  (use ${L}ths)` : '  (write a fraction like 5/6)';
@@ -444,7 +473,7 @@ function level10() {
     const L = d, top = n1 + (n2 * L) / dd;
     const ans = frac(top, L);
     return q(`-${-n1}/${d} + ${n2}/${dd} = ?  (write a fraction like -1/4)`, top === 0 ? '0' : ans, {
-      visual: { type: 'numberline', min: -1, max: 1, step: 1 / d, marks: [n1 / d, top / L] },
+      visual: { type: 'numberline', min: -1, max: 1, step: 1 / d, labels: 'fraction', den: d, marks: [n1 / d, top / L] },
       hint: `Change to ${L}ths, then combine the tops: ${n1} + ${(n2 * L) / dd}.`,
       explain: `-${-n1}/${d} + ${(n2 * L) / dd}/${L} = ${top}/${L}${top !== 0 && ans !== `${top}/${L}` ? ` = ${ans}` : ''}. Opposite signs: subtract the sizes, keep the sign of the bigger one.`,
       wrongTags: { [frac(-n1 + (n2 * L) / dd, L)]: 'ignored-negative-sign' },
@@ -473,7 +502,7 @@ function level10() {
   const a = -(randInt(10, 99) / 10), b = randInt(100, 999) / 100, swap = Math.random() < 0.5;
   const ans = dec(a + b, 2);
   return q(swap ? `${b.toFixed(2)} + (${a.toFixed(1)}) = ?` : `${a.toFixed(1)} + ${b.toFixed(2)} = ?`, ans, {
-    visual: { type: 'numberline', min: Math.floor(a) - 1, max: Math.ceil(b) + 1, marks: [a, a + b] },
+    visual: { type: 'numberline', min: Math.floor(a) - 1, max: Math.ceil(b) + 1, marks: [a, Number(ans)] },
     hint: `Opposite signs: find the difference between ${(-a).toFixed(2)} and ${b.toFixed(2)}, then use the sign of the bigger one.`,
     explain: `${a.toFixed(1)} + ${b.toFixed(2)}: the difference of ${(-a).toFixed(2)} and ${b.toFixed(2)} is ${Math.abs(a + b).toFixed(2)}; the bigger size is ${Math.abs(a) > b ? 'negative' : 'positive'}, so ${ans}.`,
     wrongTags: { [dec(-(a + b), 2)]: 'integer-sign', [dec(a - b, 2)]: 'integer-add-magnitudes' },

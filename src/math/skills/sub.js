@@ -156,7 +156,7 @@ function level4() {
     return q(`${a} - ${b} = ?`, a - b, {
       visual: { type: 'base10', value: a },
       hint: 'Take the ones away. The tens do not change.',
-      explain: `${a} - ${b}: ${a % 10} ones - ${b} ones = ${(a % 10) - b}, so ${a - b}.`,
+      explain: `${a} - ${b}: ${a % 10} ones - ${b} ${b === 1 ? 'one' : 'ones'} = ${(a % 10) - b}, so ${a - b}.`,
       wrongTags: { [String(a - b * 10)]: 'subtracting-ones-from-tens' },
     });
   }
@@ -165,8 +165,12 @@ function level4() {
     const ones = a % 10, rest = b - ones;
     return q(`${a} - ${b} = ?`, a - b, {
       visual: { type: 'base10', value: a },
-      hint: `Go back to the ten first: ${a} - ${ones} = ${a - ones}, then take away ${rest} more.`,
-      explain: `${a} - ${ones} = ${a - ones}, then ${a - ones} - ${rest} = ${a - b}.`,
+      hint: ones === 0
+        ? `${a} is a whole ten. Trade one ten for ten ones, then take away ${b}.`
+        : `Go back to the ten first: ${a} - ${ones} = ${a - ones}, then take away ${rest} more.`,
+      explain: ones === 0
+        ? `${a} - ${b}: one ten becomes ten ones. 10 - ${b} = ${10 - b}, so ${a} - ${b} = ${a - b}.`
+        : `${a} - ${ones} = ${a - ones}, then ${a - ones} - ${rest} = ${a - b}.`,
       wrongTags: { [String(smallerFromLarger(a, b))]: 'smaller-from-larger', [String(a - b + 10)]: 'forgot-regroup-ten' },
     });
   }
@@ -174,8 +178,8 @@ function level4() {
     const a = randInt(3, 10) * 10, b = randInt(1, a / 10 - 1) * 10;
     return q(`${a} - ${b} = ?`, a - b, {
       visual: { type: 'base10', value: a },
-      hint: `${a / 10} tens take away ${b / 10} tens.`,
-      explain: `${a / 10} tens - ${b / 10} tens = ${(a - b) / 10} tens = ${a - b}.`,
+      hint: `${a / 10} tens take away ${b / 10} ${b === 10 ? 'ten' : 'tens'}.`,
+      explain: `${a / 10} tens - ${b / 10} ${b === 10 ? 'ten' : 'tens'} = ${(a - b) / 10} ${a - b === 10 ? 'ten' : 'tens'} = ${a - b}.`,
       wrongTags: { [String(a - b / 10)]: 'tens-as-ones' },
     });
   }
@@ -193,15 +197,15 @@ function level4() {
     return q(`A bus has ${a} seats. ${t} are taken. How many seats are empty?`, a - t, {
       visual: { type: 'base10', value: a },
       hint: `Count back by tens from ${a}.`,
-      explain: `${a} - ${t}: count back ${t / 10} tens: ${Array.from({ length: t / 10 }, (_, i) => a - (i + 1) * 10).join(', ')}. Answer ${a - t}.`,
+      explain: `${a} - ${t}: count back ${t / 10} ${t === 10 ? 'ten' : 'tens'}: ${Array.from({ length: t / 10 }, (_, i) => a - (i + 1) * 10).join(', ')}. Answer ${a - t}.`,
       wrongTags: { [String(a - t / 10)]: 'subtracting-tens-from-ones' },
     });
   }
   const a = randInt(31, 99), t = randInt(1, Math.floor(a / 10) - 1) * 10;
   return q(`${a} - ${t} = ?`, a - t, {
     visual: { type: 'base10', value: a },
-    hint: `${t} is ${t / 10} tens. The ones digit stays ${a % 10}.`,
-    explain: `${Math.floor(a / 10)} tens - ${t / 10} tens = ${Math.floor(a / 10) - t / 10} tens, ones stay ${a % 10}. Answer ${a - t}.`,
+    hint: `${t} is ${t / 10} ${t === 10 ? 'ten' : 'tens'}. The ones digit stays ${a % 10}.`,
+    explain: `${Math.floor(a / 10)} tens - ${t / 10} ${t === 10 ? 'ten' : 'tens'} = ${Math.floor(a / 10) - t / 10} ${Math.floor(a / 10) - t / 10 === 1 ? 'ten' : 'tens'}, ones stay ${a % 10}. Answer ${a - t}.`,
     wrongTags: { [String(a - t / 10)]: 'subtracting-tens-from-ones' },
   });
 }
@@ -228,8 +232,8 @@ function level5() {
   }
   if (kind === 'countUp') {
     return q(`Count up to subtract: ${a} - ${B} = ?`, a - B, {
-      visual: { type: 'numberline', min: B - 5, max: a + 5, marks: [B, nextTen, tensTo, a] },
-      hint: `Start at ${B}. Jump to ${nextTen}, then to ${tensTo}, then to ${a}. Add the jumps.`,
+      visual: { type: 'numberline', min: B - 5, max: a + 5, marks: stops },
+      hint: `Start at ${B}. Jump to ${stops.slice(1).join(', then to ')}. Add the jumps.`,
       explain: upExplain,
       wrongTags: { [String(sfl)]: 'smaller-from-larger' },
     });
@@ -242,8 +246,8 @@ function level5() {
     });
   }
   if (kind === 'story') {
-    const [thing, ctx] = pick([['pages', 'A book has'], ['stickers', 'A sheet has'], ['points', 'A game needs']]);
-    return q(`${ctx} ${a} ${thing}. You have done ${B}. How many are left?`, a - B, {
+    const [thing, ctx, done] = pick([['pages', 'A book has', 'You have read'], ['stickers', 'A sheet has', 'You have used'], ['points', 'A game needs', 'You have']]);
+    return q(`${ctx} ${a} ${thing}. ${done} ${B}. How many more ${thing} are left?`, a - B, {
       visual: { type: 'base10', value: a },
       hint: 'Subtract the tens, then the ones. Trade a ten if you need to.',
       explain: needsRegroup
@@ -267,10 +271,13 @@ function level6() {
   const kind = pick(['std', 'std', 'zero', 'zero', 'thousand', 'missing', 'difference']);
   if (kind === 'thousand') {
     const b = randInt(105, 895);
+    const up = Math.ceil(b / 100) * 100;
     return q(`1000 - ${b} = ?`, 1000 - b, {
       visual: { type: 'numberline', min: 0, max: 1000, marks: [b, 1000] },
-      hint: `Count up: ${b} to ${Math.ceil(b / 100) * 100}, then to 1000.`,
-      explain: `${b} to ${Math.ceil(b / 100) * 100} is ${Math.ceil(b / 100) * 100 - b}, then to 1000 is ${1000 - Math.ceil(b / 100) * 100}. Total ${1000 - b}.`,
+      hint: up === b ? `Count up by hundreds from ${b} to 1000.` : `Count up: ${b} to ${up}, then to 1000.`,
+      explain: up === b
+        ? `${b} to 1000 is ${1000 - b}: ${(1000 - b) / 100} hundreds.`
+        : `${b} to ${up} is ${up - b}, then to 1000 is ${1000 - up}. Total ${1000 - b}.`,
       wrongTags: { [String(1000 - b + 100)]: 'zero-column-error', [String(smallerFromLarger(1000, b))]: 'smaller-from-larger' },
     });
   }
@@ -297,7 +304,9 @@ function level6() {
     return q(`What is the difference between ${b} and ${a}?`, a - b, {
       visual: { type: 'numberline', min: b - 20, max: a + 20, marks: [b, a] },
       hint: `Count up from ${b} to ${a} in hundreds, tens and ones.`,
-      explain: `${b} to ${Math.ceil(b / 100) * 100} is ${Math.ceil(b / 100) * 100 - b}; then to ${a} is ${a - Math.ceil(b / 100) * 100}. Total ${a - b}.`,
+      explain: b % 100 === 0
+        ? `Count up from ${b} to ${a}: that is ${a - b}.`
+        : `${b} to ${Math.ceil(b / 100) * 100} is ${Math.ceil(b / 100) * 100 - b}; then to ${a} is ${a - Math.ceil(b / 100) * 100}. Total ${a - b}.`,
       wrongTags: { [String(smallerFromLarger(a, b))]: 'smaller-from-larger' },
     });
   }
@@ -318,9 +327,14 @@ function level7() {
     const paid = pick([500, 1000, 2000, 2000, 5000, 10000]), cost = randInt(105, paid - 5);
     const c = cost - (cost % 5); // no pennies: prices in 5-cent steps
     const ans = ((paid - c) / 100).toFixed(2);
+    const nextDollar = Math.ceil(c / 100) * 100;
     return q(`You pay with ${money(paid)} for something that costs ${money(c)}. How much change?  (like 6.35)`, ans, {
       hint: `Count up from ${money(c)} to the next dollar, then up to ${money(paid)}.`,
-      explain: `Count up: ${money(c)} to $${Math.ceil(c / 100).toFixed(2)} is ${money(Math.ceil(c / 100) * 100 - c)}, then to ${money(paid)} is ${money(paid - Math.ceil(c / 100) * 100)}. Change $${ans}.`,
+      explain: nextDollar === c
+        ? `Count up: ${money(c)} to ${money(paid)} is ${money(paid - c)}. Change $${ans}.`
+        : nextDollar === paid
+          ? `Count up: ${money(c)} to ${money(paid)} is ${money(paid - c)}. Change $${ans}.`
+          : `Count up: ${money(c)} to ${money(nextDollar)} is ${money(nextDollar - c)}, then to ${money(paid)} is ${money(paid - nextDollar)}. Change $${ans}.`,
       wrongTags: { [((paid - c + 100) / 100).toFixed(2)]: 'zero-column-error' },
     });
   }
@@ -328,7 +342,9 @@ function level7() {
     const a = pick([5003, 4000, 7002, 6010, 9001, 3000, 8005]), b = randInt(1111, a - 500);
     return q(`${fmt(a)} - ${fmt(b)} = ?`, a - b, {
       hint: 'Zeros in the middle: borrow across them, or count up from the smaller number.',
-      explain: `${fmt(a)} - ${fmt(b)} = ${fmt(a - b)}. Counting up: ${fmt(b)} to ${fmt(Math.ceil(b / 1000) * 1000)} is ${Math.ceil(b / 1000) * 1000 - b}, then on to ${fmt(a)}.`,
+      explain: b % 1000 === 0
+        ? `${fmt(a)} - ${fmt(b)} = ${fmt(a - b)}. Only the thousands change: ${Math.floor(a / 1000)} - ${b / 1000} = ${Math.floor(a / 1000) - b / 1000}.`
+        : `${fmt(a)} - ${fmt(b)} = ${fmt(a - b)}. Counting up: ${fmt(b)} to ${fmt(Math.ceil(b / 1000) * 1000)} is ${Math.ceil(b / 1000) * 1000 - b}, then on to ${fmt(a)} is ${fmt(a - Math.ceil(b / 1000) * 1000)}. ${Math.ceil(b / 1000) * 1000 - b} + ${fmt(a - Math.ceil(b / 1000) * 1000)} = ${fmt(a - b)}.`,
       wrongTags: { [String(smallerFromLarger(a, b))]: 'smaller-from-larger', [String(a - b + 100)]: 'zero-column-error' },
     });
   }
@@ -370,15 +386,20 @@ function level8() {
     });
   }
   if (kind === 'elapsed') {
-    const sh = randInt(1, 10), sm = pick([0, 15, 30, 45, 10, 20, 50]);
+    const sh = randInt(1, 9), sm = pick([0, 15, 30, 45, 10, 20, 50]); // sh <= 9 keeps the end time on a 12-hour clock
     const dur = randInt(35, 170);
     const total = sh * 60 + sm + dur, eh = Math.floor(total / 60), em = total % 60;
     const pad = (m) => String(m).padStart(2, '0');
     const nextHour = (sh + 1) * 60;
+    const crossesHour = total >= nextHour;
     return q(`A movie starts at ${sh}:${pad(sm)} and ends at ${eh}:${pad(em)}. How many minutes long is it?`, dur, {
       visual: { type: 'clock', hour: sh, minute: sm },
-      hint: `Count up: ${sh}:${pad(sm)} to ${sh + 1}:00 is ${60 - sm} minutes, then hours, then the rest.`,
-      explain: `${sh}:${pad(sm)} to ${sh + 1}:00 is ${60 - sm} min; ${sh + 1}:00 to ${eh}:${pad(em)} is ${total - nextHour} min. ${60 - sm} + ${total - nextHour} = ${dur} min.`,
+      hint: crossesHour
+        ? `Count up: ${sh}:${pad(sm)} to ${sh + 1}:00 is ${60 - sm} minutes, then hours, then the rest.`
+        : `Both times are in the same hour. Count up from ${pad(sm)} to ${pad(em)} minutes.`,
+      explain: crossesHour
+        ? `${sh}:${pad(sm)} to ${sh + 1}:00 is ${60 - sm} min; ${sh + 1}:00 to ${eh}:${pad(em)} is ${total - nextHour} min. ${60 - sm} + ${total - nextHour} = ${dur} min.`
+        : `${sh}:${pad(sm)} to ${eh}:${pad(em)} stays in the same hour: ${em} - ${sm} = ${dur} min.`,
       wrongTags: { [String(Math.abs((eh - sh) * 100 + (em - sm)))]: 'time-as-base-100' },
     });
   }
@@ -485,7 +506,7 @@ function level10() {
     });
   }
   if (kind === 'twoStep') {
-    const a = randInt(300, 999), b = randInt(50, 200), c = randInt(50, 200);
+    const a = randInt(450, 999), b = randInt(50, 200), c = randInt(50, 200); // a > b + c keeps the result positive
     return q(`${a} - ${b} - ${c} = ?`, a - b - c, {
       hint: `Take ${b} away first, then ${c}. Or take away ${b + c} all at once.`,
       explain: `${a} - ${b} = ${a - b}, then ${a - b} - ${c} = ${a - b - c}. (Same as ${a} - ${b + c}.)`,
@@ -508,7 +529,7 @@ function level10() {
     const places = fr[2] === 0.125 ? 3 : 2;
     const ans = dec(fr[2] - d, places);
     return q(`${fr[0]}/${fr[1]} - ${d.toFixed(1)} = ?  (answer as a decimal)`, ans, {
-      visual: { type: 'numberline', min: -4, max: 1, marks: [fr[2], fr[2] - d] },
+      visual: { type: 'numberline', min: -4, max: 1, marks: [fr[2], Number(ans)] },
       hint: `${fr[0]}/${fr[1]} = ${fr[2]}. Taking away more than you have goes below zero.`,
       explain: `${fr[2]} - ${d.toFixed(1)} = ${ans}. The answer is negative because ${d.toFixed(1)} is bigger than ${fr[2]}.`,
       wrongTags: { [dec(d - fr[2], places)]: 'integer-sign' },
@@ -517,7 +538,7 @@ function level10() {
   const a = -(randInt(10, 99) / 10), b = randInt(100, 999) / 100;
   const ans = dec(a - b, 2);
   return q(`${a.toFixed(1)} - ${b.toFixed(2)} = ?`, ans, {
-    visual: { type: 'numberline', min: Math.floor(a - b) - 1, max: 1, marks: [a, a - b] },
+    visual: { type: 'numberline', min: Math.floor(a - b) - 1, max: 1, marks: [a, Number(ans)] },
     hint: 'Both parts push further below zero. Add the sizes and keep the minus sign.',
     explain: `${a.toFixed(1)} - ${b.toFixed(2)}: ${(-a).toFixed(2)} + ${b.toFixed(2)} = ${(-a + b).toFixed(2)} below zero, so ${ans}.`,
     wrongTags: { [dec(-(a - b), 2)]: 'integer-sign', [dec(a + b, 2)]: 'integer-direction' },

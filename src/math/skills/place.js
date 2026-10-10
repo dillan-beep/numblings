@@ -26,6 +26,19 @@ function wt(answer, obj) {
   return out;
 }
 const roundTo = (n, place) => Math.round(n / place) * place;
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const THIN = ' ';
+// Numbers under 10 000 are written plain; larger ones get a thin-space group separator (prompts only).
+const fmt = (n) => {
+  const s = String(Math.abs(n));
+  if (s.length < 5) return String(n);
+  return (n < 0 ? '-' : '') + s.replace(/\B(?=(\d{3})+(?!\d))/g, THIN);
+};
+// Digits that appear exactly once in n (so "the 7 in 174 000" is unambiguous).
+const uniqueDigits = (n) => {
+  const s = String(n);
+  return [...new Set(s)].filter((d) => s.indexOf(d) === s.lastIndexOf(d)).map(Number);
+};
 const PLACE_NAMES = { 1: 'ones', 10: 'tens', 100: 'hundreds', 1000: 'thousands', 10000: 'ten thousands', 100000: 'hundred thousands' };
 
 const ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
@@ -53,11 +66,11 @@ function L1() {
     visual: { type: 'base10', value: n },
     choices: mkChoices(ones, [n, 1, ones + 1], () => randInt(1, 9)),
     hint: 'Take away the ten; what is left?',
-    explain: `${n} = 10 + ${ones}: 1 ten and ${ones} ones.`,
+    explain: `${n} = 10 + ${ones}: 1 ten and ${plural(ones, 'one')}.`,
     wrongTags: wt(ones, { [n]: 'whole-not-part', '1': 'counted-the-ten' }),
   };
   if (t === 1) return {
-    prompt: `What number is 1 ten and ${ones} ones?`, answer: String(n),
+    prompt: `What number is 1 ten and ${plural(ones, 'one')}?`, answer: String(n),
     choices: mkChoices(n, [ones * 10 + 1, Number(`10${ones}`), ones + 1], () => randInt(10, 19)),
     hint: 'Start at 10 and count on.',
     explain: `10 + ${ones} = ${n}.`,
@@ -68,7 +81,7 @@ function L1() {
     visual: { type: 'base10', value: n },
     choices: mkChoices(n, [ones * 10 + 1, ones + 1, n + 1], () => randInt(10, 19)),
     hint: 'The long rod is 10. Count the small cubes.',
-    explain: `One rod is 10, plus ${ones} cubes: ${n}.`,
+    explain: `One rod is 10, plus ${plural(ones, 'cube')}: ${n}.`,
     wrongTags: wt(n, { [ones * 10 + 1]: 'digit-reversal', [ones + 1]: 'rod-as-one' }),
   };
 }
@@ -77,17 +90,17 @@ function L2() {
   const tens = randInt(1, 4), ones = randInt(0, 9), n = tens * 10 + ones;
   const t = randInt(0, 3);
   if (t === 0) return {
-    prompt: `${n} = __ tens and ${ones} ones`, answer: String(tens),
+    prompt: `${n} = __ tens and ${plural(ones, 'one')}`, answer: String(tens),
     visual: { type: 'base10', value: n },
     hint: 'How many rods of 10?',
-    explain: `${n} = ${tens * 10} + ${ones}: ${tens} tens and ${ones} ones.`,
+    explain: `${n} = ${tens * 10} + ${ones}: ${plural(tens, 'ten')} and ${plural(ones, 'one')}.`,
     wrongTags: { [n]: 'whole-not-part', [ones]: 'wrong-digit' },
   };
   if (t === 1) {
     const o = ones || randInt(1, 9), nn = tens * 10 + o;
     return {
       prompt: `${tens * 10} + ${o} = ?`, answer: String(nn),
-      hint: `${tens} tens and ${o} ones.`,
+      hint: `${plural(tens, 'ten')} and ${plural(o, 'one')}.`,
       explain: `${tens * 10} + ${o} = ${nn}.`,
       wrongTags: { [tens + o]: 'rod-as-one', [Number(`${tens * 10}${o}`)]: 'concatenate' },
     };
@@ -97,14 +110,14 @@ function L2() {
     visual: { type: 'base10', value: n },
     choices: mkChoices(n, [tens + ones, ones * 10 + tens, n + 10], () => randInt(10, 50)),
     hint: 'Each rod is 10, each cube is 1.',
-    explain: `${tens} rods = ${tens * 10}, plus ${ones} cubes = ${n}.`,
+    explain: `${plural(tens, 'rod')} = ${tens * 10}, plus ${plural(ones, 'cube')} = ${n}.`,
     wrongTags: wt(n, { [tens + ones]: 'rod-as-one', [ones * 10 + tens]: 'digit-reversal' }),
   };
   const o = ones || randInt(1, 9), nn = tens * 10 + o;
   return {
-    prompt: `${nn} = ${tens} tens and __ ones`, answer: String(o),
+    prompt: `${nn} = ${plural(tens, 'ten')} and __ ones`, answer: String(o),
     hint: 'Look at the last digit.',
-    explain: `${nn} = ${tens * 10} + ${o}, so ${o} ones.`,
+    explain: `${nn} = ${tens * 10} + ${o}, so ${plural(o, 'one')}.`,
     wrongTags: { [tens]: 'wrong-digit' },
   };
 }
@@ -138,7 +151,7 @@ function L3() {
       prompt: `Which is bigger: ${x} or ${y}?`, answer: String(big),
       choices: [String(x), String(y)],
       hint: 'Compare the tens digits first.',
-      explain: `${big} has ${Math.floor(big / 10)} tens and ${small} has ${Math.floor(small / 10)} tens, so ${big} is bigger.`,
+      explain: `${big} has ${plural(Math.floor(big / 10), 'ten')} and ${small} has ${plural(Math.floor(small / 10), 'ten')}, so ${big} is bigger.`,
       wrongTags: { [small]: 'ones-first' },
     };
   }
@@ -146,7 +159,7 @@ function L3() {
     const tens = randInt(5, 9), ones = randInt(1, 9), n = tens * 10 + ones;
     return {
       prompt: `${tens * 10} + ${ones} = ?`, answer: String(n),
-      hint: `${tens} tens and ${ones} ones.`,
+      hint: `${plural(tens, 'ten')} and ${plural(ones, 'one')}.`,
       explain: `${tens * 10} + ${ones} = ${n}.`,
       wrongTags: { [tens + ones]: 'rod-as-one' },
     };
@@ -193,7 +206,8 @@ function L4() {
     };
   }
   if (t === 3) {
-    const h = randInt(1, 9), tn = randInt(1, 9), o = randInt(1, 9), n = h * 100 + tn * 10 + o;
+    // three different nonzero digits, so "the 3 in 353" can never be asked
+    const [h, tn, o] = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]).slice(0, 3), n = h * 100 + tn * 10 + o;
     const place = pick([100, 10, 1]), digit = place === 100 ? h : place === 10 ? tn : o;
     return {
       prompt: `What is the value of the ${digit} in ${n}?`, answer: String(digit * place),
@@ -208,7 +222,7 @@ function L4() {
     prompt: 'What number do the blocks show?', answer: String(n),
     visual: { type: 'base10', value: n },
     hint: 'Flats are 100, rods are 10, cubes are 1.',
-    explain: `${Math.floor(n / 100)} flats = ${Math.floor(n / 100) * 100}, ${Math.floor((n % 100) / 10)} rods = ${Math.floor((n % 100) / 10) * 10}, ${n % 10} cubes: ${n}.`,
+    explain: `${plural(Math.floor(n / 100), 'flat')} = ${Math.floor(n / 100) * 100}, ${plural(Math.floor((n % 100) / 10), 'rod')} = ${Math.floor((n % 100) / 10) * 10}, ${plural(n % 10, 'cube')}: ${n}.`,
   };
 }
 
@@ -326,10 +340,10 @@ function L7() {
   if (t === 0) {
     const n = randInt(100000, 999999);
     const place = pick([100000, 10000, 1000, 100, 10]);
-    let digit = Math.floor(n / place) % 10;
-    if (digit === 0) return L7();
+    const digit = Math.floor(n / place) % 10;
+    if (digit === 0 || !uniqueDigits(n).includes(digit)) return L7(); // the digit must appear exactly once
     return {
-      prompt: `What is the value of the ${digit} in ${n}?`, answer: String(digit * place),
+      prompt: `What is the value of the ${digit} in ${fmt(n)}?`, answer: String(digit * place),
       choices: mkChoices(digit * place, [digit, digit * place / 10, digit * place * 10], () => randInt(1, 9) * pick([10, 100, 1000, 10000, 100000])),
       hint: `Count the places from the right.`,
       explain: `The ${digit} is in the ${PLACE_NAMES[place]} place: ${digit} x ${place} = ${digit * place}.`,
@@ -346,7 +360,7 @@ function L7() {
       prompt: `Which number is "${w}"?`, answer: String(n),
       choices: mkChoices(n, wrongs, () => randInt(100000, 999999)),
       hint: 'Thousands period, then the last three places. Use 0 for empty places.',
-      explain: `${words999(th)} thousand is ${th} followed by three places: ${th} ${String(rest).padStart(3, '0')} = ${n}.`,
+      explain: `${words999(th)} thousand is ${th} followed by three places: ${th} ${String(rest).padStart(3, '0')} = ${fmt(n)}.`,
       wrongTags: wt(n, { [Number(`${th}${rest}`)]: 'missing-placeholder', [th * 100 + rest]: 'missing-placeholder' }),
     };
   }
@@ -362,10 +376,10 @@ function L7() {
       if (alt !== n && alt >= 1000) wrongs.add(words(alt));
     }
     return {
-      prompt: `How do you write ${n} in words?`, answer: w,
+      prompt: `How do you write ${fmt(n)} in words?`, answer: w,
       choices: shuffle([w, ...wrongs]),
       hint: 'Say the thousands group, then the rest.',
-      explain: `${n} is ${w}.`,
+      explain: `${fmt(n)} is ${w}.`,
     };
   }
   if (t === 3) {
@@ -373,18 +387,18 @@ function L7() {
     const place = pick([100000, 10000, 1000]);
     const digit = Math.floor(n / place) % 10;
     return {
-      prompt: `What digit is in the ${PLACE_NAMES[place]} place of ${n}?`, answer: String(digit),
+      prompt: `What digit is in the ${PLACE_NAMES[place]} place of ${fmt(n)}?`, answer: String(digit),
       hint: 'The thousands period is the first three digits.',
-      explain: `${n}: ${PLACE_NAMES[place]} place holds ${digit}.`,
+      explain: `${fmt(n)}: ${PLACE_NAMES[place]} place holds ${digit}.`,
     };
   }
-  const n = randInt(1000, 999999);
   const r = pick([1000, 10000]);
+  const n = randInt(r, 999999); // at least r, so the rounded answer is never 0
   if (n % r === r / 2) return L7();
   return {
-    prompt: `Round ${n} to the nearest ${r}.`, answer: String(roundTo(n, r)),
+    prompt: `Round ${fmt(n)} to the nearest ${fmt(r)}.`, answer: String(roundTo(n, r)),
     hint: `Look at the digit to the right of the ${PLACE_NAMES[r]} place.`,
-    explain: `${n} is between ${Math.floor(n / r) * r} and ${Math.floor(n / r) * r + r}; it is closer to ${roundTo(n, r)}.`,
+    explain: `${fmt(n)} is between ${fmt(Math.floor(n / r) * r)} and ${fmt(Math.floor(n / r) * r + r)}; it is closer to ${fmt(roundTo(n, r))}.`,
     wrongTags: { [roundTo(n, r / 10)]: 'wrong-place' },
   };
 }

@@ -25,13 +25,15 @@ Handy pages on the dev server: `/scripts/sprite-sheet.html` (every sprite) and `
 ## What the kids see
 
 1. **Pick your name**, hatch a creature (dragon, cat, dog, dino, robot, unicorn, fox, owl), name it.
-2. **Train**: 10-question rounds. Correct answers earn coins and XP. Wrong answers show a one-line worked explanation. Finishing a round earns tokens.
-3. **Battle**: pick a monster. Every correct answer is an attack (harder questions and better weapons hit harder; streaks combo). Wrong answers let the monster hit back. Winning drops coins and sometimes gear. Bosses unlock as the creature levels up.
-4. **Quests**: three new quests every day for bonus tokens.
-5. **Shop / My Stuff**: food, toys, hats, weapons, wings, worlds, buddies. Gear shows on the creature.
-6. **Rewards**: real-life prizes bought with tokens; requests wait for a parent to approve.
-7. **Progress**: skill ladders, badges, daily stats chart.
-8. **Ask Pip**: on any question, a help button opens the AI tutor. Kids can type or tap the mic and talk. Pip asks guiding questions and gives hints but never the answer, and reads replies out loud.
+2. **Check-up** (first play): one question per skill, one level above where their grade starts. Each one they get right unlocks that higher level right away.
+3. **Train**: 10-question rounds. Correct answers earn coins and XP. Wrong answers show a one-line worked explanation. Finishing a round earns tokens.
+4. **Battle**: pick a monster. Every correct answer is an attack (harder questions and better weapons hit harder; streaks combo). Wrong answers let the monster hit back. Winning drops coins and sometimes gear. Bosses unlock as the creature levels up.
+5. **Lightning**: a 60-second fact drill (addition, subtraction, mental math, multiplication, division). 8 right = 1 token, 15 = 2, 25 = 3. Best score is kept.
+6. **Quests**: three new quests every day for bonus tokens.
+7. **Shop / My Stuff**: food, toys, hats, weapons, wings, worlds, buddies. Gear shows on the creature.
+8. **Rewards**: real-life prizes bought with tokens; requests wait for a parent to approve.
+9. **Progress**: skill ladders, badges, daily stats chart.
+10. **Ask Pip**: on any question, a help button opens the AI tutor. Kids can type or tap the mic and talk. Pip asks guiding questions and gives hints but never the answer, and reads replies out loud.
 
 ## How the math works
 

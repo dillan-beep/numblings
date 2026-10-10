@@ -21,7 +21,7 @@ function level1() {
       prompt: 'How many dots are in the ten frame?', answer: String(n),
       visual: { type: 'tenframe', count: n },
       hint: 'Touch each dot once as you count.',
-      explain: `Count each dot one time: 1, 2, 3 ... up to ${n}. There are ${n} dots.`,
+      explain: n === 1 ? 'There is just 1 dot.' : `Count each dot one time: 1, 2, 3 ... up to ${n}. There are ${n} dots.`,
     };
   }
   if (kind === 'counters') {
@@ -38,7 +38,7 @@ function level1() {
     return {
       prompt: 'How many dots? Try to see it without counting.', answer: String(n),
       visual: { type: 'counters', count: n, icon: 'dot' },
-      explain: `This pattern shows ${n} dots. Seeing a small group all at once is called subitizing.`,
+      explain: `This pattern shows ${n} ${n === 1 ? 'dot' : 'dots'}. Seeing a small group all at once is called subitizing.`,
     };
   }
   if (kind === 'after') {
@@ -143,9 +143,9 @@ function level3() {
       explain: `Each group has ${step}, so count by ${step}s: ${seq(steps)}. That is ${g * step} ${thing}.`,
     };
   }
-  // 'next' and 'missing' start at the first multiple; 'fromStart' begins at any number (for 2s) or any multiple.
+  // 'next' and 'missing' start at the first multiple; 'fromStart' begins at any even number (for 2s) or any multiple.
   let start = kind === 'fromStart' ? randInt(1, Math.floor(maxStart / step)) * step : 0;
-  if (kind === 'fromStart' && step === 2) start = randInt(1, 20);
+  if (kind === 'fromStart' && step === 2) start = randInt(1, 10) * 2;
   const list = start === 0 ? [step, 2 * step, 3 * step, 4 * step] : [start, start + step, start + 2 * step, start + 3 * step];
   if (kind === 'missing') {
     const hole = randInt(1, 2);
@@ -189,7 +189,7 @@ function level4() {
     const wrongOnes = start + 21;
     return {
       prompt: `Count by 10s from ${start}: ${seq(list)}, __`, answer: String(start + 30),
-      visual: { type: 'numberline', min: start - 1, max: start + 35, step: 10, marks: list },
+      visual: { type: 'numberline', min: start, max: start + 30, step: 10, marks: list },
       hint: 'Only the tens digit changes when you count by 10s.',
       explain: `${start + 20} + 10 = ${start + 30}. The ones digit stays ${start % 10}; the tens go up by one.`,
       wrongTags: { [String(wrongOnes)]: 'off-decade-skip' },
@@ -230,7 +230,7 @@ function level4() {
   const list = [start, start + 5, start + 10, start + 15];
   return {
     prompt: `Count by 5s from ${start}: ${seq(list)}, __`, answer: String(start + 20),
-    visual: { type: 'numberline', min: start - 1, max: start + 25, step: 5, marks: list },
+    visual: { type: 'numberline', min: start, max: start + 20, step: 5, marks: list },
     explain: `${start + 15} + 5 = ${start + 20}.`,
     wrongTags: { [String(start + 16)]: 'skip-count-by-ones' },
   };
@@ -255,7 +255,7 @@ function level5() {
     const list = [start, start + 10, start + 20];
     return {
       prompt: `Count by 10s: ${seq(list)}, __`, answer: String(start + 30),
-      visual: { type: 'numberline', min: start - 5, max: start + 35, step: 10, marks: list },
+      visual: { type: 'numberline', min: start, max: start + 30, step: 10, marks: list },
       hint: 'Add one ten each time. Crossing a hundred changes the hundreds digit.',
       explain: `${start + 20} + 10 = ${start + 30}.`,
       wrongTags: { [String(start + 21)]: 'off-decade-skip' },
@@ -326,7 +326,7 @@ function level6() {
     const list = [start, start + step, start + 2 * step];
     return {
       prompt: `Count by ${step}s from ${start}: ${seq(list)}, __`, answer: String(start + 3 * step),
-      visual: { type: 'numberline', min: start - 1, max: start + 4 * step, step, marks: list },
+      visual: { type: 'numberline', min: start, max: start + 4 * step, step, marks: list },
       hint: 'You do not need to start at 0. Just keep adding the same jump.',
       explain: `${start + 2 * step} + ${step} = ${start + 3 * step}.`,
       wrongTags: { [String(4 * step)]: 'skip-from-zero-only' },
@@ -337,7 +337,7 @@ function level6() {
     const safe = n + 10 <= 10000 ? n : n - 20;
     return {
       prompt: `${fmt(safe)} + 10 = ?`, answer: String(safe + 10),
-      visual: { type: 'base10', value: safe % 1000 },
+      visual: { type: 'base10', value: safe },
       hint: 'Add one ten. If the tens digit is 9, the hundreds digit goes up.',
       explain: `${fmt(safe)} + 10 = ${fmt(safe + 10)}.`,
       wrongTags: { [String(safe + 1)]: 'tens-vs-ones', [String(safe + 100)]: 'tens-vs-hundreds' },
@@ -407,7 +407,9 @@ function level7() {
       prompt: `The temperature is ${t} degrees. It rises ${k} degrees. What is it now?`, answer: String(t + k),
       visual: { type: 'thermometer', value: t, min: -20, max: 20 },
       hint: 'Count up to 0 first, then keep going.',
-      explain: `From ${t}, going up ${-t} reaches 0, then ${k - (-t)} more: ${t} + ${k} = ${t + k}.`,
+      explain: k >= -t
+        ? `From ${t}, going up ${-t} reaches 0, then ${k + t} more: ${t} + ${k} = ${t + k}.`
+        : `From ${t}, going up ${k} stays below zero: ${t} + ${k} = ${t + k}.`,
       wrongTags: { [String(t - k)]: 'integer-direction', [String(-(t + k))]: 'integer-sign' },
     };
   }
@@ -457,7 +459,7 @@ function level8() {
     const trapAns = /\.9$/.test(list[2]) ? list[2].replace(/\.9$/, '.10') : trap;
     return {
       prompt: `Count by tenths: ${seq(list)}, __`, answer: ans,
-      visual: { type: 'numberline', min: Math.floor(start), max: Math.floor(start) + 1, step: 0.1, marks: list.map(Number) },
+      visual: { type: 'numberline', min: Math.floor(start), max: Math.max(Math.floor(start) + 1, Math.ceil(start + 0.3)), step: 0.1, marks: list.map(Number) },
       hint: 'Ten tenths make one whole. After 0.9 comes 1.0.',
       explain: `${list[2]} + 0.1 = ${ans}.`,
       wrongTags: { [trapAns]: 'decimal-ten-tenths' },
@@ -483,22 +485,22 @@ function level8() {
     };
   }
   if (kind === 'fifths') {
-    const k = randInt(1, 6);
+    const k = pick([1, 3, 4, 5, 6]); // never 2: the answer 5/5 is a whole and a typed "1" would be marked wrong
     const list = [`${k}/5`, `${k + 1}/5`, `${k + 2}/5`];
     return {
       prompt: `Count by fifths: ${seq(list)}, __  (write it as a fraction)`, answer: `${k + 3}/5`,
-      visual: { type: 'numberline', min: 0, max: 2, step: 0.2, marks: [k / 5, (k + 1) / 5, (k + 2) / 5] },
+      visual: { type: 'numberline', min: 0, max: 2, step: 0.2, labels: 'fraction', den: 5, marks: [k / 5, (k + 1) / 5, (k + 2) / 5] },
       hint: 'Add one more fifth to the top number.',
       explain: `The top number goes up by 1 each time: ${k + 2}/5 + 1/5 = ${k + 3}/5.`,
       wrongTags: { [`${k + 3}/6`]: 'add-denominators' },
     };
   }
   if (kind === 'halves') {
-    const k = randInt(1, 7); // in halves
+    const k = pick([2, 4, 6]); // in halves; even k keeps the answer (k+3)/2 a proper fraction, not a whole
     const list = [k, k + 1, k + 2].map((h) => `${h}/2`);
     return {
       prompt: `Count by halves: ${seq(list)}, __  (write it as a fraction)`, answer: `${k + 3}/2`,
-      visual: { type: 'numberline', min: 0, max: 5, step: 0.5, marks: [k / 2, (k + 1) / 2, (k + 2) / 2] },
+      visual: { type: 'numberline', min: 0, max: 5, step: 0.5, labels: 'fraction', den: 2, marks: [k / 2, (k + 1) / 2, (k + 2) / 2] },
       explain: `Each step adds one half: ${k + 2}/2 + 1/2 = ${k + 3}/2.`,
     };
   }
@@ -510,7 +512,7 @@ function level8() {
   return {
     prompt: `Count by halves: ${seq(list)}, __`, answer: ans,
     choices: shuffle(uniq([ans, mixed(k + 4), mixed(k + 2), mixed(k + 5)]).slice(0, 4)),
-    visual: { type: 'numberline', min: 0, max: 5, step: 0.5, marks: [k / 2, (k + 1) / 2, (k + 2) / 2] },
+    visual: { type: 'numberline', min: 0, max: 5, step: 0.5, labels: 'fraction', den: 2, mixed: true, marks: [k / 2, (k + 1) / 2, (k + 2) / 2] },
     hint: 'Each jump is one half. Two halves make a whole.',
     explain: `${list[2]} plus one half is ${ans}.`,
   };
@@ -615,11 +617,12 @@ function level10() {
     };
   }
   if (kind === 'eighths') {
-    const k = randInt(1, 9), step = pick([1, 1, 3]);
+    let k = randInt(1, 9), step = pick([1, 1, 3]);
+    if ((k + 3 * step) % 8 === 0) k += 1; // keep the answer a fraction, not a whole number (8/8, 16/8)
     const list = [k, k + step, k + 2 * step].map((e) => `${e}/8`);
     return {
       prompt: `Continue: ${seq(list)}, __  (write it as a fraction)`, answer: `${k + 3 * step}/8`,
-      visual: { type: 'numberline', min: 0, max: 3, step: 0.125, marks: [k / 8, (k + step) / 8, (k + 2 * step) / 8] },
+      visual: { type: 'numberline', min: 0, max: 3, step: 0.125, labels: 'fraction', den: 8, marks: [k / 8, (k + step) / 8, (k + 2 * step) / 8] },
       hint: `Each step adds ${step}/8.`,
       explain: `The numerators go up by ${step}: ${k + 2 * step}/8 + ${step}/8 = ${k + 3 * step}/8.`,
       wrongTags: { [`${k + 3 * step}/${8 + 8}`]: 'add-denominators' },

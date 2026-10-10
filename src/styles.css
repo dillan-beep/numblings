@@ -288,7 +288,9 @@ th { color: var(--muted); font-size: 0.9rem; }
 @media (max-width: 640px) {
   body { font-size: 20px; }
   .logo { font-size: 1.4rem; }
-  .stage { height: 280px; }
+  .stage { height: 300px; }
+  .speech { top: 62px; font-size: 0.95rem; }
+  .badge-pill { font-size: 0.85rem; padding: 4px 8px; }
   .question { font-size: 1.7rem; }
   .skill-row { grid-template-columns: 2rem 1fr 90px 60px; }
   .arena { height: 240px; } .fighter { width: 140px; height: 140px; }
