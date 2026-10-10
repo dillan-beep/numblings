@@ -1,7 +1,7 @@
 // Training rounds + the shared question UI (also used by battles) + the Pip tutor panel.
 import { esc, floatText, confetti, toast } from '../ui.js';
 import { SKILLS } from '../math/skills.js';
-import { ROUND_SIZE, newRound, drawQuestion, answer, finishRound } from '../game.js';
+import { ROUND_SIZE, newRound, drawQuestion, answer, finishRound, newPlacement, finishPlacement, newLightning, finishLightning, LIGHTNING_SECONDS } from '../game.js';
 import { renderVisual, mountVisual, isInteractive } from '../visuals/index.js';
 import { sfx } from '../audio.js';
 import { askTutor, listen, stopListening, speak, stopSpeaking, speechSupported, TutorError } from '../tutor/tutor.js';
@@ -83,6 +83,15 @@ export function submit(app, val, onAnswered) {
   if (onAnswered) onAnswered(fb);
   if (round.onAnswered) round.onAnswered(fb);
   app.render();
+  if (round.mode === 'lightning') {
+    // auto-advance: short flash, then next question (or the summary if time is up)
+    setTimeout(() => {
+      if (app.round !== round || round.done) return;
+      if (Date.now() >= round.endsAt) return; // the timer tick will finish it
+      drawQuestion(app.state, app.p, round); app.render();
+    }, fb.ok ? 350 : 1100);
+    return;
+  }
   if (fb.ok) floatText(`+${fb.coins} 🪙`, window.innerWidth / 2 - 30, window.innerHeight / 2);
   for (const b of round.badges.splice(0)) toast(`🏅 Badge: ${b.name}!`, 2500);
 }
@@ -90,17 +99,104 @@ export function submit(app, val, onAnswered) {
 /* ---------- training screen ---------- */
 
 export function render(app) {
-  if (!app.round || app.round.mode !== 'train') startRound(app, { mode: 'train' });
+  const mode = app.view.mode || 'train';
+  if (!app.round || app.round.mode !== mode) {
+    if (mode === 'placement') { app.round = newPlacement(app.state, app.p); app.round.intro = true; }
+    else if (mode === 'lightning') { app.round = newLightning(app.state, app.p); app.round.intro = true; }
+    else startRound(app, { mode: 'train' });
+  }
   const round = app.round;
-  if (round.done) return summary(app, round);
+  if (round.intro) return mode === 'placement' ? placementIntro(app, round) : lightningIntro(app, round);
+  if (round.done) return mode === 'placement' ? placementSummary(app, round) : mode === 'lightning' ? lightningSummary(app, round) : summary(app, round);
+  if (mode === 'lightning') return lightningScreen(app, round);
   return `
     <div class="quiz">
-      <div class="topbar"><button class="ghost" data-action="q-quit">✕ Quit</button><span class="pill coin">🪙 +${round.coins}</span></div>
-      ${questionArea(app, round)}
+      <div class="topbar"><button class="ghost" data-action="q-quit">✕ Quit</button>${mode === 'placement' ? `<span class="pill">🧭 Check-up ${round.n + 1} / ${round.total}</span>` : ''}<span class="pill coin">🪙 +${round.coins}</span></div>
+      ${questionArea(app, round, { showProgress: mode === 'train' })}
     </div>`;
 }
 
-export function mount(app, root) { mountQuestion(app, root); return () => { stopListening(); stopSpeaking(); }; }
+export function mount(app, root) {
+  mountQuestion(app, root);
+  let timer = null;
+  const round = app.round;
+  if (round?.mode === 'lightning' && !round.intro && !round.done) {
+    timer = setInterval(() => {
+      const left = Math.max(0, round.endsAt - Date.now());
+      const bar = root.querySelector('[data-l-timer]'); if (bar) bar.style.width = `${(left / (LIGHTNING_SECONDS * 1000)) * 100}%`;
+      const num = root.querySelector('[data-l-secs]'); if (num) num.textContent = Math.ceil(left / 1000);
+      if (left <= 0) { clearInterval(timer); finishLightning(app.state, app.p, round); app.save(); sfx(round.tokens ? 'win' : 'lose'); app.render(); if (round.tokens) confetti(40); for (const b of round.badges.splice(0)) toast(`🏅 Badge: ${b.name}!`, 2500); }
+    }, 100);
+  }
+  return () => { if (timer) clearInterval(timer); stopListening(); stopSpeaking(); };
+}
+
+/* ---------- placement ---------- */
+
+function placementIntro(app, round) {
+  const p = app.p;
+  return `<div class="quiz"><div class="panel center">
+    <div style="font-size:3.5rem">🧭</div>
+    <h1>Quick check-up!</h1>
+    <p>Hi ${esc(p.name)}! Before we start, let's see what you already know.</p>
+    <p class="muted">${round.total} questions, one from each kind of math. Some might be tricky, and that's okay! Every one you get right unlocks a harder level and earns coins.</p>
+    <div class="row" style="justify-content:center;margin-top:16px"><button class="primary" data-action="pl-start">Let's go! 🚀</button></div>
+  </div></div>`;
+}
+
+function placementSummary(app, round) {
+  const p = app.p;
+  return `<div class="quiz"><div class="panel center">
+    <div style="font-size:3.5rem">🎉</div>
+    <h1>Check-up done!</h1>
+    <p style="font-size:1.3rem">${round.correct} / ${round.total} correct</p>
+    ${round.bumped.length ? `<p>🚀 Starting higher in: ${round.bumped.map((s) => esc(SKILLS[s].name)).join(', ')}</p>` : '<p class="muted">We\'ll start from the beginning and climb together!</p>'}
+    <div class="row" style="justify-content:center;margin:12px 0"><span class="pill coin">🪙 +${round.coins}</span><span class="pill token">🎟️ +${round.tokens}</span><span class="pill">⭐ +${round.xp}</span></div>
+    <div class="row" style="justify-content:center;margin-top:16px"><button class="primary" data-action="q-again">Start training 🧠</button><button data-action="home">Home 🏠</button></div>
+  </div></div>`;
+}
+
+/* ---------- lightning ---------- */
+
+function lightningIntro(app, round) {
+  const p = app.p;
+  return `<div class="quiz"><div class="panel center">
+    <div style="font-size:3.5rem">⚡</div>
+    <h1>Lightning Round</h1>
+    <p>${LIGHTNING_SECONDS} seconds. As many fast facts as you can!</p>
+    <p class="muted tiny">Type the answer and press ✓ or Enter. Wrong answers just show the right one and move on.<br>8 right = 1 token · 15 right = 2 tokens · 25 right = 3 tokens${p.stats.lightningBest ? ` · your best: ${p.stats.lightningBest}` : ''}</p>
+    <div class="row" style="justify-content:center;margin-top:16px"><button class="primary" data-action="l-start">GO! ⚡</button><button data-action="home">Back</button></div>
+  </div></div>`;
+}
+
+function lightningScreen(app, round) {
+  const q = round.q; const fb = round.feedback;
+  const left = Math.max(0, round.endsAt - Date.now());
+  return `<div class="quiz">
+    <div class="topbar"><button class="ghost" data-action="q-quit">✕ Quit</button><span class="pill">⚡ <b data-l-secs>${Math.ceil(left / 1000)}</b>s</span><span class="pill good" style="color:var(--good)">✅ ${round.correct}</span><span class="pill coin">🪙 +${round.coins}</span></div>
+    <div class="l-timer"><div class="fill" data-l-timer style="width:${(left / (LIGHTNING_SECONDS * 1000)) * 100}%"></div></div>
+    <div class="panel question ${fb ? (fb.ok ? 'flash-ok' : 'flash-no') : ''}">${esc(q.prompt)}${fb && !fb.ok ? `<span class="l-answer">= ${esc(q.answer)}</span>` : ''}</div>
+    <div class="answer-box">${esc(round.input)}<span class="caret"></span></div>
+    <div class="pad">
+      ${['7', '8', '9'].map((d) => `<button class="silent" data-action="q-key" data-val="${d}">${d}</button>`).join('')}<button class="silent" data-action="q-key" data-val="⌫">⌫</button>
+      ${['4', '5', '6'].map((d) => `<button class="silent" data-action="q-key" data-val="${d}">${d}</button>`).join('')}<button class="silent" data-action="q-key" data-val="-">−</button>
+      ${['1', '2', '3'].map((d) => `<button class="silent" data-action="q-key" data-val="${d}">${d}</button>`).join('')}<button class="enter silent" data-action="q-submit">✓</button>
+      <button class="silent" data-action="q-key" data-val=".">.</button><button class="silent" data-action="q-key" data-val="0">0</button><button class="silent" data-action="q-key" data-val="/">/</button>
+    </div>
+  </div>`;
+}
+
+function lightningSummary(app, round) {
+  const p = app.p;
+  return `<div class="quiz"><div class="panel center">
+    <div style="font-size:3.5rem">${round.correct >= 15 ? '🏆' : round.correct >= 8 ? '⚡' : '💪'}</div>
+    <h1>${round.isBest ? 'NEW BEST!' : 'Time!'}</h1>
+    <p style="font-size:1.4rem">${round.correct} correct in ${LIGHTNING_SECONDS} seconds</p>
+    <div class="row" style="justify-content:center;margin:12px 0"><span class="pill coin">🪙 +${round.coins}</span><span class="pill token">🎟️ +${round.tokens}</span><span class="pill">⭐ +${round.xp}</span></div>
+    ${round.tokens === 0 ? '<p class="muted">Get 8 right next time for a token!</p>' : ''}
+    <div class="row" style="justify-content:center;margin-top:16px"><button class="primary" data-action="l-again">Again ⚡</button><button data-action="home">Home 🏠</button></div>
+  </div></div>`;
+}
 
 function summary(app, round) {
   const p = app.p;
@@ -184,6 +280,8 @@ async function sendToTutor(app, text) {
 
 export function onKey(app, e) {
   const round = app.round; if (!round || round.done) return;
+  if (round.intro) { if (e.key === 'Enter') document.querySelector('[data-action=pl-start],[data-action=l-start]')?.click(); return; }
+  if (round.mode === 'lightning' && round.feedback) return; // auto-advancing
   const inTutor = document.activeElement?.id === 'tutor-input';
   if (inTutor) { if (e.key === 'Enter') { e.preventDefault(); actions['tutor-send'](app); } return; }
   if (round.feedback) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); actions['q-next'](app); } return; }
@@ -202,12 +300,19 @@ export const actions = {
   'q-choice': (app, el) => submit(app, el.dataset.val),
   'q-next': (app) => {
     const r = app.round; if (!r) return;
-    if (r.mode === 'battle') { actions['b-next']?.(app); return; }
+    if (r.mode === 'placement') {
+      if (!r.queue.length) { finishPlacement(app.state, app.p, r); app.save(); sfx('win'); app.render(); confetti(50); }
+      else { drawQuestion(app.state, app.p, r); app.render(); }
+      return;
+    }
     if (r.n >= ROUND_SIZE) { finishRound(app.state, app.p, r); app.save(); sfx(r.correct === ROUND_SIZE ? 'win' : 'token'); app.render(); confetti(r.correct === ROUND_SIZE ? 90 : 30); for (const b of r.badges.splice(0)) toast(`🏅 Badge: ${b.name}!`, 2500); }
     else { drawQuestion(app.state, app.p, r); app.render(); }
   },
   'q-quit': (app) => { app.round = null; app.go('home'); },
-  'q-again': (app) => { startRound(app, { mode: 'train' }); app.render(); },
+  'q-again': (app) => { app.view.mode = 'train'; startRound(app, { mode: 'train' }); app.render(); },
+  'pl-start': (app) => { const r = app.round; r.intro = false; r.startedAt = Date.now(); drawQuestion(app.state, app.p, r); app.render(); },
+  'l-start': (app) => { const r = app.round; r.intro = false; r.startedAt = Date.now(); r.endsAt = Date.now() + LIGHTNING_SECONDS * 1000; drawQuestion(app.state, app.p, r); sfx('quest'); app.render(); },
+  'l-again': (app) => { app.round = newLightning(app.state, app.p); app.round.intro = true; app.render(); },
   'tutor-open': (app) => {
     const r = app.round; if (!r) return;
     if (!app.state.tutor.enabled || !app.state.tutor.apiKey) { toast('Pip is asleep. Ask a grown-up to wake him in Parent Mode.', 3000); return; }

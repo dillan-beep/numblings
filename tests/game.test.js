@@ -83,3 +83,52 @@ describe('battle', () => {
     }
   });
 });
+
+import { newPlacement, drawQuestion, answer, finishPlacement, newLightning, finishLightning, needsPlacement } from '../src/game.js';
+import { defaultState } from '../src/state.js';
+import { newPet } from '../src/pets.js';
+import { unlockedSkillIds } from '../src/math/engine.js';
+
+const fresh = (idx = 1) => { const st = defaultState(); const p = st.profiles[KIDS[idx].id]; p.pet = newPet('cat', 'Tom'); return { st, p }; };
+
+describe('placement', () => {
+  it('asks one question per unlocked skill at one level up and bumps correct ones', () => {
+    const { st, p } = fresh(1);
+    expect(needsPlacement(p)).toBe(true);
+    const r = newPlacement(st, p);
+    expect(r.total).toBe(unlockedSkillIds(p.skills).length);
+    const starts = Object.fromEntries(Object.entries(p.skills).map(([k, v]) => [k, v.level]));
+    let i = 0;
+    while (r.queue.length) {
+      drawQuestion(st, p, r);
+      expect(r.q.level).toBe(Math.min(10, starts[r.q.skillId] + 1));
+      answer(st, p, r, i % 2 === 0 ? r.q.answer : 'zzz');
+      i++;
+    }
+    finishPlacement(st, p, r);
+    expect(p.placed).toBe(true);
+    expect(needsPlacement(p)).toBe(false);
+    for (const res of r.results) expect(p.skills[res.skillId].level).toBe(res.ok ? starts[res.skillId] + 1 : starts[res.skillId]);
+    expect(r.bumped.length).toBe(r.results.filter((x) => x.ok).length);
+    for (const id of Object.keys(p.skills)) expect(p.skills[id].window.length).toBe(0);
+  });
+});
+
+describe('lightning', () => {
+  it('serves quick typeable facts without repeating prompts', () => {
+    const { st, p } = fresh(0);
+    const r = newLightning(st, p); r.endsAt = Date.now() + 60000;
+    const prompts = [];
+    for (let i = 0; i < 20; i++) { drawQuestion(st, p, r); prompts.push(r.q.prompt); expect(r.q.choices).toBeUndefined(); expect(r.q.visual).toBeUndefined(); answer(st, p, r, r.q.answer); }
+    expect(new Set(prompts).size).toBeGreaterThanOrEqual(11);
+    expect(r.correct).toBe(20);
+    for (const id of Object.keys(p.skills)) expect(p.skills[id].window.length).toBe(0);
+  });
+  it('pays tokens by score', () => {
+    const { st, p } = fresh(2);
+    const r = newLightning(st, p); r.correct = 15; finishLightning(st, p, r);
+    expect(r.tokens).toBe(2); expect(p.stats.lightningBest).toBe(15); expect(r.isBest).toBe(true);
+    const r2 = newLightning(st, p); r2.correct = 3; finishLightning(st, p, r2);
+    expect(r2.tokens).toBe(0); expect(r2.isBest).toBe(false);
+  });
+});

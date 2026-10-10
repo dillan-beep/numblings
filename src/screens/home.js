@@ -4,6 +4,7 @@ import { tickPet, mood, stageIndex, itemById } from '../pets.js';
 import { PETS } from '../pixel/sprites.js';
 import { petCanvas } from '../pixel/pet.js';
 import { ensureQuests } from '../quests.js';
+import { needsPlacement } from '../game.js';
 import { todayKey } from '../state.js';
 import { isMuted, setMuted } from '../audio.js';
 
@@ -78,8 +79,9 @@ export function render(app) {
       <div class="track" style="margin-top:6px"><div class="fill" style="width:${(cur / need) * 100}%"></div></div>
     </div>
     <div class="actions">
-      <button class="primary" data-action="train"><span class="emoji">🧠</span>Train</button>
+      <button class="primary" data-action="train"><span class="emoji">🧠</span>${needsPlacement(p) ? 'Start!' : 'Train'}</button>
       <button class="bad" data-action="arena"><span class="emoji">⚔️</span>Battle</button>
+      <button class="blue" data-action="lightning"><span class="emoji">⚡</span>Lightning${p.stats.lightningBest ? `<span class="tiny" style="display:block">best ${p.stats.lightningBest}</span>` : ''}</button>
       <button data-action="quests"><span class="emoji">📜</span>Quests${openQuests ? `<span class="badge-count">${openQuests}</span>` : ''}</button>
       <button data-action="shop"><span class="emoji">🛒</span>Shop</button>
       <button data-action="closet"><span class="emoji">🎒</span>My Stuff</button>
@@ -93,7 +95,8 @@ export function mount(app, root) { return mountPet(app, root); }
 export const actions = {
   leave: (app) => app.leave(),
   home: (app) => app.go('home'),
-  train: (app) => app.go('quiz', { mode: 'train' }),
+  train: (app) => app.go('quiz', { mode: needsPlacement(app.p) ? 'placement' : 'train' }),
+  lightning: (app) => app.go('quiz', { mode: 'lightning' }),
   arena: (app) => app.go('battle'),
   quests: (app) => app.go('progress', { tab: 'quests' }),
   shop: (app) => app.go('shop'),
