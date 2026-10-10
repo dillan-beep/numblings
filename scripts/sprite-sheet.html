@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pet Math sprite sheet</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; padding: 16px; background: #d9e4ec; color: #1a1a2e; font: 13px/1.4 system-ui, sans-serif; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    h2 { font-size: 15px; margin: 24px 0 8px; border-bottom: 2px solid #1a1a2e; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    .cell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; background: #fff; border: 2px solid #1a1a2e; border-radius: 6px; }
+    .cell.dark { background: #2b2d42; color: #fff; }
+    .cell canvas { image-rendering: pixelated; display: block; background: repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0 0 / 16px 16px; }
+    .cell.dark canvas { background: repeating-conic-gradient(#3a3d5c 0 25%, #2b2d42 0 50%) 0 0 / 16px 16px; }
+    .cell small { opacity: .7; }
+    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+    .frames { display: flex; gap: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Pet Math sprite sheet</h1>
+  <div class="toolbar">
+    <label>Scale <input id="scale" type="number" min="1" max="8" value="4" /></label>
+    <label><input id="anim" type="checkbox" checked /> Animate (toggle frames)</label>
+    <label><input id="dark" type="checkbox" /> Dark cells</label>
+  </div>
+  <div id="root"></div>
+
+  <script type="module">
+    import { PALETTE, PETS, ACCESSORIES, MONSTERS, ICONS } from '../src/pixel/sprites.js';
+    import { drawSprite, spriteDataURL } from '../src/pixel/render.js';
+
+    const root = document.getElementById('root');
+    const scaleInput = document.getElementById('scale');
+    const animInput = document.getElementById('anim');
+    const darkInput = document.getElementById('dark');
+    const animated = [];
+
+    function cell(label, sprite, sub) {
+      const scale = Number(scaleInput.value) || 4;
+      const div = document.createElement('div');
+      div.className = 'cell' + (darkInput.checked ? ' dark' : '');
+      const frames = document.createElement('div');
+      frames.className = 'frames';
+      sprite.frames.forEach((_, i) => {
+        const c = document.createElement('canvas');
+        c.width = sprite.w * scale;
+        c.height = sprite.h * scale;
+        drawSprite(c.getContext('2d'), sprite, i, 0, 0, scale);
+        frames.appendChild(c);
+      });
+      // Animated preview (uses the memoized data URL path).
+      if (sprite.frames.length > 1) {
+        const img = document.createElement('img');
+        img.width = sprite.w * scale;
+        img.height = sprite.h * scale;
+        img.style.imageRendering = 'pixelated';
+        img.src = spriteDataURL(sprite, 0, scale);
+        img.dataset.frame = '0';
+        animated.push([img, sprite, scale]);
+        frames.appendChild(img);
+      }
+      div.appendChild(frames);
+      const name = document.createElement('div');
+      name.textContent = label;
+      div.appendChild(name);
+      if (sub) {
+        const s = document.createElement('small');
+        s.textContent = sub;
+        div.appendChild(s);
+      }
+      return div;
+    }
+
+    function section(title) {
+      const h = document.createElement('h2');
+      h.textContent = title;
+      root.appendChild(h);
+      const row = document.createElement('div');
+      row.className = 'row';
+      root.appendChild(row);
+      return row;
+    }
+
+    function build() {
+      root.innerHTML = '';
+      animated.length = 0;
+
+      for (const [id, pet] of Object.entries(PETS)) {
+        const row = section(`Pet: ${pet.name} (${id})`);
+        pet.stages.forEach((s, i) => row.appendChild(cell(pet.stageNames[i], s, `${s.w}x${s.h}`)));
+      }
+
+      for (const slot of ['hat', 'weapon', 'wings', 'buddy']) {
+        const row = section(`Accessories: ${slot}`);
+        for (const [id, acc] of Object.entries(ACCESSORIES)) {
+          if (acc.slot === slot) row.appendChild(cell(id, acc.sprite, `${acc.sprite.w}x${acc.sprite.h} @${acc.anchor}`));
+        }
+      }
+
+      const mrow = section('Monsters (face left)');
+      for (const [id, m] of Object.entries(MONSTERS)) mrow.appendChild(cell(`${m.name} (${id})`, m.sprite, `hp ${m.hp}, ${m.sprite.w}x${m.sprite.h}`));
+
+      const irow = section('Icons 8x8');
+      for (const [id, s] of Object.entries(ICONS)) irow.appendChild(cell(id, s));
+
+      const prow = section('Palette');
+      for (const [key, color] of Object.entries(PALETTE)) {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        const sw = document.createElement('div');
+        sw.style.cssText = `width:32px;height:32px;background:${color};border:2px solid #1a1a2e`;
+        div.appendChild(sw);
+        const t = document.createElement('div');
+        t.textContent = `${key} ${color}`;
+        div.appendChild(t);
+        prow.appendChild(div);
+      }
+    }
+
+    scaleInput.addEventListener('change', build);
+    darkInput.addEventListener('change', build);
+    build();
+
+    setInterval(() => {
+      if (!animInput.checked) return;
+      for (const [img, sprite, scale] of animated) {
+        const next = (Number(img.dataset.frame) + 1) % sprite.frames.length;
+        img.dataset.frame = String(next);
+        img.src = spriteDataURL(sprite, next, scale);
+      }
+    }, 500);
+  </script>
+</body>
+</html>

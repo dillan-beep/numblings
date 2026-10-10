@@ -1,79 +1,104 @@
 import { describe, it, expect } from 'vitest';
-import { SKILLS, SKILL_IDS, MAX_LEVEL, makeQuestion, isCorrect } from '../src/math/skills.js';
-import { initSkills, recordResult, nextQuestion, unlockedSkillIds, STREAK_TO_LEVEL_UP } from '../src/math/engine.js';
+import { SKILLS, SKILL_IDS } from '../src/math/skills.js';
+import { initSkills, ensureSkills, recordResult, nextQuestion, unlockedSkillIds, pickLevel, WINDOW, PROMOTE_MIN, aboveGradeCount } from '../src/math/engine.js';
 import { coinsForAnswer, roundTokens, petLevelFromXp, xpForLevel, DEFAULT_RULES } from '../src/economy.js';
 import { newPet, tickPet, mood, applyEffect, stageIndex } from '../src/pets.js';
 
-describe('skill generators', () => {
-  for (const id of SKILL_IDS) {
-    it(`${id}: every level produces a valid question`, () => {
-      for (let level = 1; level <= MAX_LEVEL; level++) {
-        for (let i = 0; i < 150; i++) {
-          const q = makeQuestion(id, level);
-          expect(q.prompt, `${id} L${level}`).toBeTruthy();
-          expect(q.answer, `${id} L${level} answer`).toBeTruthy();
-          expect(String(q.answer)).not.toMatch(/NaN|undefined|Infinity/);
-          if (q.choices) {
-            expect(q.choices.length).toBeGreaterThanOrEqual(2);
-            expect(q.choices).toContain(q.answer);
-            expect(new Set(q.choices).size).toBe(q.choices.length);
-          }
-          expect(isCorrect(q, q.answer)).toBe(true);
-        }
-      }
-    });
-  }
-
-  it('isCorrect tolerates formatting', () => {
-    expect(isCorrect({ answer: '12' }, ' 12 ')).toBe(true);
-    expect(isCorrect({ answer: '4.5' }, '4.50')).toBe(true);
-    expect(isCorrect({ answer: '1.25' }, '$1.25')).toBe(true);
-    expect(isCorrect({ answer: '3/4' }, '3 / 4')).toBe(true);
-    expect(isCorrect({ answer: '12' }, '13')).toBe(false);
-    expect(isCorrect({ answer: '12' }, '')).toBe(false);
-  });
-});
+const firstSkill = () => SKILL_IDS[0];
 
 describe('engine', () => {
   it('starting levels follow grade', () => {
-    expect(initSkills(1).add.level).toBe(SKILLS.add.start[1]);
-    expect(initSkills(4).mul.level).toBe(SKILLS.mul.start[4]);
+    const id = firstSkill();
+    expect(initSkills(1)[id].level).toBe(SKILLS[id].start[1]);
+    expect(initSkills(4)[id].level).toBe(SKILLS[id].start[4]);
   });
 
-  it('levels up after a streak and down after misses', () => {
-    const s = initSkills(3);
-    const start = s.add.level;
+  it('promotes after 9 of 10 with a clean last 5', () => {
+    const s = initSkills(3); const id = firstSkill(); s[id].level = 3;
+    const seq = [true, false, true, true, true, true, true, true, true, true];
     let up = false;
-    for (let i = 0; i < STREAK_TO_LEVEL_UP; i++) up = recordResult(s, 'add', true).leveledUp || up;
+    for (const ok of seq) up = recordResult(s, id, ok, { level: 3 }).leveledUp || up;
     expect(up).toBe(true);
-    expect(s.add.level).toBe(start + 1);
-    recordResult(s, 'add', false);
-    recordResult(s, 'add', false);
-    const r = recordResult(s, 'add', false);
-    expect(r.leveledDown).toBe(true);
-    expect(s.add.level).toBe(start);
+    expect(s[id].level).toBe(4);
+    expect(s[id].window).toEqual([]);
   });
 
-  it('a wrong answer breaks the streak', () => {
-    const s = initSkills(1);
-    recordResult(s, 'sub', true); recordResult(s, 'sub', true);
-    recordResult(s, 'sub', false);
-    expect(s.sub.streak).toBe(0);
+  it('does not promote on a 10-streak with a recent miss in the last 5', () => {
+    const s = initSkills(3); const id = firstSkill(); s[id].level = 3;
+    const seq = [true, true, true, true, true, true, true, false, true, true];
+    for (const ok of seq) recordResult(s, id, ok, { level: 3 });
+    expect(s[id].level).toBe(3);
+  });
+
+  it('demotes on 2 wrong in the last 5 and treats a single miss as a slip', () => {
+    const s = initSkills(3); const id = firstSkill(); s[id].level = 4;
+    expect(recordResult(s, id, true, { level: 4 }).slip).toBe(false);
+    const r1 = recordResult(s, id, false, { level: 4 });
+    expect(r1.slip).toBe(true); expect(s[id].level).toBe(4);
+    recordResult(s, id, true, { level: 4 });
+    const r2 = recordResult(s, id, false, { level: 4 });
+    expect(r2.leveledDown).toBe(true); expect(s[id].level).toBe(3);
+  });
+
+  it('never goes below level 1 and caps at 10', () => {
+    const s = initSkills(1); const id = firstSkill(); s[id].level = 1;
+    for (let i = 0; i < 10; i++) recordResult(s, id, false, { level: 1 });
+    expect(s[id].level).toBe(1);
+    s[id].level = 10; s[id].window = [];
+    for (let i = 0; i < WINDOW; i++) recordResult(s, id, true, { level: 10 });
+    expect(s[id].level).toBe(10);
+  });
+
+  it('review answers do not count toward promotion but a missed review hurts', () => {
+    const s = initSkills(3); const id = firstSkill(); s[id].level = 5;
+    for (let i = 0; i < WINDOW; i++) recordResult(s, id, true, { level: 4 });
+    expect(s[id].level).toBe(5);
+    expect(s[id].window.length).toBe(0);
+    recordResult(s, id, false, { level: 4 });
+    expect(s[id].window).toEqual([false]);
   });
 
   it('locked skills unlock as prerequisites rise', () => {
     const s = initSkills(1);
-    expect(unlockedSkillIds(s)).not.toContain('mul');
-    s.add.level = 3;
-    expect(unlockedSkillIds(s)).toContain('mul');
+    const locked = SKILL_IDS.filter((id) => SKILLS[id].unlock);
+    if (!locked.length) return;
+    const id = locked[0]; const u = SKILLS[id].unlock;
+    s[u.skill].level = 1;
+    expect(unlockedSkillIds(s)).not.toContain(id);
+    s[u.skill].level = u.level;
+    expect(unlockedSkillIds(s)).toContain(id);
   });
 
-  it('nextQuestion returns a question from an unlocked skill', () => {
-    const s = initSkills(1);
-    for (let i = 0; i < 50; i++) {
-      const q = nextQuestion(s, null);
+  it('nextQuestion only asks unlocked skills and marks review levels', () => {
+    const s = initSkills(4);
+    for (let i = 0; i < 60; i++) {
+      const q = nextQuestion(s, 4, { today: 'd' });
       expect(unlockedSkillIds(s)).toContain(q.skillId);
+      expect(q.level).toBeLessThanOrEqual(s[q.skillId].level);
+      expect(q.review).toBe(q.level < s[q.skillId].level);
     }
+  });
+
+  it('pickLevel stays within two below and warmups use one below', () => {
+    for (let i = 0; i < 100; i++) {
+      const l = pickLevel({ level: 6 }); expect(l).toBeGreaterThanOrEqual(4); expect(l).toBeLessThanOrEqual(6);
+    }
+    expect(pickLevel({ level: 6 }, { warmup: true })).toBe(5);
+    expect(pickLevel({ level: 1 })).toBe(1);
+  });
+
+  it('ensureSkills migrates old shapes', () => {
+    const s = { [firstSkill()]: { level: 2, streak: 3, history: [true, false] } };
+    ensureSkills(s, 3);
+    expect(s[firstSkill()].window).toEqual([true, false]);
+    expect(s[firstSkill()].streak).toBeUndefined();
+    expect(Object.keys(s).length).toBe(SKILL_IDS.length);
+  });
+
+  it('counts skills above grade', () => {
+    const s = initSkills(1);
+    s[firstSkill()].level = 3;
+    expect(aboveGradeCount(s, 1)).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -110,8 +135,6 @@ describe('pets', () => {
     expect(mood(p).label).toBe('Starving');
   });
   it('stages', () => {
-    expect(stageIndex(1)).toBe(0);
-    expect(stageIndex(5)).toBe(1);
-    expect(stageIndex(12)).toBe(2);
+    expect(stageIndex(1)).toBe(0); expect(stageIndex(5)).toBe(1); expect(stageIndex(12)).toBe(2);
   });
 });

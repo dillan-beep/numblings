@@ -19,9 +19,17 @@ export function newProfile(kid) {
     tokens: 0,
     tokensEarned: 0,
     skills: initSkills(kid.grade),
-    stats: { rounds: 0, answered: 0, correct: 0, lastRoundDay: null, dayStreak: 0, bestStreak: 0 },
+    stats: {
+      rounds: 0, answered: 0, correct: 0, lastRoundDay: null, dayStreak: 0, bestStreak: 0,
+      answerStreak: 0, bestAnswerStreak: 0, perfectRounds: 0, purchases: 0, evolutions: 0,
+      battlesWon: 0, battlesLost: 0, bossesBeaten: 0, questsDone: 0, tutorAsks: 0, comebacks: 0, wrongRun: 0,
+      minutes: 0,
+    },
     redemptions: [],
     log: [],
+    quests: null,
+    badges: {},
+    history: [], // per-day summaries: { day, answered, correct, tokens }
   };
 }
 
@@ -31,6 +39,7 @@ export function defaultState() {
     parentPin: '1234',
     rules: { ...DEFAULT_RULES },
     rewards: DEFAULT_REWARDS.map((r) => ({ ...r })),
+    tutor: { apiKey: '', model: 'claude-opus-5-5', enabled: true, voice: true },
     profiles: Object.fromEntries(KIDS.map((k) => [k.id, newProfile(k)])),
   };
 }
@@ -48,7 +57,7 @@ export function load() {
 
 function migrate(data) {
   const base = defaultState();
-  const out = { ...base, ...data, rules: { ...base.rules, ...(data.rules || {}) } };
+  const out = { ...base, ...data, rules: { ...base.rules, ...(data.rules || {}) }, tutor: { ...base.tutor, ...(data.tutor || {}) } };
   for (const k of KIDS) {
     if (!out.profiles[k.id]) out.profiles[k.id] = newProfile(k);
     const p = out.profiles[k.id];
@@ -58,6 +67,9 @@ function migrate(data) {
     p.stats = { ...base.profiles[k.id].stats, ...(p.stats || {}) };
     p.log ||= [];
     p.redemptions ||= [];
+    p.badges ||= {};
+    p.history ||= [];
+    p.quests ||= null;
   }
   return out;
 }
