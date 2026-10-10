@@ -61,6 +61,7 @@ function migrate(data) {
   for (const k of KIDS) {
     if (!out.profiles[k.id]) out.profiles[k.id] = newProfile(k);
     const p = out.profiles[k.id];
+    Object.assign(p, { name: k.name, age: k.age, grade: k.grade, color: k.color }); // KIDS is the source of truth
     for (const id of Object.keys(base.profiles[k.id].skills)) {
       if (!p.skills[id]) p.skills[id] = base.profiles[k.id].skills[id];
     }
