@@ -1,7 +1,7 @@
 // Multiplication ladder (curriculum A4).
 import { randInt, pick, shuffle } from '../rng.js';
 
-const NAMES = ['Jack', 'Luke', 'Madeline', 'Ava', 'Noah', 'Mia', 'Leo', 'Zoe'];
+const NAMES = ['Jack', 'Luke', 'Madelyn', 'Ava', 'Noah', 'Mia', 'Leo', 'Zoe'];
 const THINGS = ['apples', 'stickers', 'marbles', 'cookies', 'blocks', 'shells'];
 const BAGS = ['bags', 'boxes', 'baskets', 'jars'];
 

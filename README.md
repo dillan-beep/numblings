@@ -1,6 +1,6 @@
 # Numblings 🐉
 
-A pixel-art creature-raising math game for Jack (grade 1), Luke (grade 3), and Madeline (grade 4).
+A pixel-art creature-raising math game for Jack (grade 1), Luke (grade 3), and Madelyn (grade 4).
 Every bit of pet care, gear, and monster fighting is paid for with math. Kids earn **coins** (for their creature) and **tokens** (for real-life rewards you approve).
 
 ## Quick start

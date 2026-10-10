@@ -5,7 +5,7 @@
 
 ## Goal
 
-A browser game that gets Jack (6, grade 1), Luke (8, grade 3), and Madeline (9, grade 4) doing math well above grade level, by tying all pet care and upgrades to answering questions. Kids earn in-game coins for the pet and real-life tokens that parents redeem.
+A browser game that gets Jack (6, grade 1), Luke (8, grade 3), and Madelyn (9, grade 4) doing math well above grade level, by tying all pet care and upgrades to answering questions. Kids earn in-game coins for the pet and real-life tokens that parents redeem.
 
 ## Decisions
 

@@ -1,7 +1,7 @@
 // Division ladder (curriculum A5).
 import { randInt, pick, shuffle } from '../rng.js';
 
-const NAMES = ['Jack', 'Luke', 'Madeline', 'Ava', 'Noah', 'Mia', 'Leo', 'Zoe'];
+const NAMES = ['Jack', 'Luke', 'Madelyn', 'Ava', 'Noah', 'Mia', 'Leo', 'Zoe'];
 const THINGS = ['cookies', 'stickers', 'marbles', 'grapes', 'cards', 'blocks'];
 
 function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a; }

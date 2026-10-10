@@ -269,7 +269,7 @@ Realism check: a grade 1 child in October has just finished kindergarten; most c
 
 Diagnostic rule: on first play, run a 6-question placement per domain starting at the recommended level; two misses drops one level, 6/6 bumps one level up, before regular play begins.
 
-| Domain | Jack (Gr 1, age 6) | Luke (Gr 3, age 8) | Madeline (Gr 4, age 9) |
+| Domain | Jack (Gr 1, age 6) | Luke (Gr 3, age 8) | Madelyn (Gr 4, age 9) |
 |---|---|---|---|
 | Counting & number sense | 1 | 4 | 5 |
 | Addition | 1 | 4 | 5 |
@@ -290,7 +290,7 @@ Diagnostic rule: on first play, run a 6-question placement per domain starting a
 | Mental math strategies | 1 | 3 | 4 |
 | Factors/multiples/primes | — (unlock at multiplication L3) | 2 | 3 |
 
-Grade targets if the goal is "far above grade level" by June: Jack to L3–4 in core number domains (end of grade 2 equivalent); Luke to L6 (end of grade 4/5); Madeline to L7 (end of grade 5/6). Hard ceiling guard: do not offer a level more than 3 above the child's current grade anchor without a placement check, to avoid frustration spirals.
+Grade targets if the goal is "far above grade level" by June: Jack to L3–4 in core number domains (end of grade 2 equivalent); Luke to L6 (end of grade 4/5); Madelyn to L7 (end of grade 5/6). Hard ceiling guard: do not offer a level more than 3 above the child's current grade anchor without a placement check, to avoid frustration spirals.
 
 ---
 

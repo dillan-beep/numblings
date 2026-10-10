@@ -6,7 +6,7 @@ const PETS = ['dogs', 'cats', 'fish', 'birds', 'rabbits', 'hamsters'];
 const FRUIT = ['apples', 'bananas', 'grapes', 'oranges', 'pears', 'berries'];
 const SPORTS = ['hockey', 'soccer', 'swimming', 'skating', 'baseball', 'biking'];
 const SEASONS = ['winter', 'spring', 'summer', 'fall'];
-const KIDS = ['Jack', 'Luke', 'Madeline'];
+const KIDS = ['Jack', 'Luke', 'Madelyn'];
 const ICONS = ['star', 'heart', 'coin', 'token'];
 
 const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));

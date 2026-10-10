@@ -8,7 +8,7 @@ const VERSION = 1;
 export const KIDS = [
   { id: 'jack', name: 'Jack', age: 6, grade: 1, color: '#4fd38a' },
   { id: 'luke', name: 'Luke', age: 8, grade: 3, color: '#4f9cff' },
-  { id: 'madeline', name: 'Madeline', age: 9, grade: 4, color: '#c77dff' },
+  { id: 'madeline', name: 'Madelyn', age: 9, grade: 4, color: '#c77dff' },
 ];
 
 export function newProfile(kid) {

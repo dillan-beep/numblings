@@ -1,7 +1,7 @@
 // Word problems (curriculum A16). Levels 1..10.
 import { randInt, pick, shuffle } from '../rng.js';
 
-const KIDS = ['Jack', 'Luke', 'Madeline'];
+const KIDS = ['Jack', 'Luke', 'Madelyn'];
 // [singular, plural]
 const ITEMS = [
   ['hockey card', 'hockey cards'], ['Pokemon card', 'Pokemon cards'], ['LEGO brick', 'LEGO bricks'], ['Timbit', 'Timbits'],
@@ -157,7 +157,7 @@ const LEVELS = {
       const k = pick(KIDS);
       const take = randInt(1, each - 1);
       return {
-        prompt: `${total} ${it[1]} are shared equally by ${kids} kids. Then ${k} gives away ${take} of ${k === 'Madeline' ? 'hers' : 'his'}. How many does ${k} have left?`,
+        prompt: `${total} ${it[1]} are shared equally by ${kids} kids. Then ${k} gives away ${take} of ${k === 'Madelyn' ? 'hers' : 'his'}. How many does ${k} have left?`,
         answer: String(each - take),
         hint: 'Divide first, then subtract.',
         explain: `${total} ÷ ${kids} = ${each} each. ${each} − ${take} = ${each - take}.`,

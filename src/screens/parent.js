@@ -30,7 +30,7 @@ export function render(app) {
         <td>${p.stats.rounds}</td><td>${acc}% <span class="muted tiny">(${p.stats.answered})</span></td><td>${above}/${SKILL_IDS.length}</td><td>🔥 ${p.stats.dayStreak}</td><td>${p.coins}</td><td>${p.tokens} <span class="muted tiny">(${p.tokensEarned} earned)</span></td>
         <td class="row"><button data-action="p-progress" data-id="${k.id}">Details</button><button data-action="p-tokens" data-id="${k.id}" data-n="5">+5 🎟️</button><button data-action="p-tokens" data-id="${k.id}" data-n="-5">−5 🎟️</button></td></tr>`; }).join('')}
       </table>
-      <p class="muted tiny" style="margin-top:8px">"Above grade" counts skills at least two levels past where that grade starts in October (one level up is about the end of the current grade). June targets: Jack Lv${GRADE_TARGET[1]}, Luke Lv${GRADE_TARGET[3]}, Madeline Lv${GRADE_TARGET[4]}.</p>
+      <p class="muted tiny" style="margin-top:8px">"Above grade" counts skills at least two levels past where that grade starts in October (one level up is about the end of the current grade). June targets: Jack Lv${GRADE_TARGET[1]}, Luke Lv${GRADE_TARGET[3]}, Madelyn Lv${GRADE_TARGET[4]}.</p>
     </div>
 
     <div class="panel" style="margin-top:14px"><h3>Pending redemptions ${pendingAll.length ? `(${pendingAll.length})` : ''}</h3>
