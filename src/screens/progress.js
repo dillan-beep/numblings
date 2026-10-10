@@ -4,10 +4,11 @@ import { SKILLS, SKILL_IDS, MAX_LEVEL } from '../math/skills.js';
 import { isUnlocked, levelProgress, GRADE_TARGET, GRADE_NOW, aboveGradeCount, isAboveGrade } from '../math/engine.js';
 import { ensureQuests } from '../quests.js';
 import { BADGES } from '../achievements.js';
-import { todayKey } from '../state.js';
+import { todayKey, logEvent } from '../state.js';
 
 export function render(app, p = app.p, back = 'home') {
   const tab = app.view.tab || 'skills';
+  const parentView = back === 'parent-back';
   return `
     <div class="topbar"><div class="row"><button class="ghost" data-action="${back}">← Back</button><h2>📈 ${esc(p.name)}</h2></div></div>
     <div class="tabs">
@@ -16,10 +17,10 @@ export function render(app, p = app.p, back = 'home') {
       <button class="${tab === 'badges' ? 'active' : ''}" data-action="prog-tab" data-id="badges">🏅 Badges</button>
       <button class="${tab === 'stats' ? 'active' : ''}" data-action="prog-tab" data-id="stats">📊 Stats</button>
     </div>
-    ${tab === 'skills' ? skillsTab(p) : tab === 'quests' ? questsTab(p) : tab === 'badges' ? badgesTab(p) : statsTab(p)}`;
+    ${tab === 'skills' ? skillsTab(p, parentView) : tab === 'quests' ? questsTab(p) : tab === 'badges' ? badgesTab(p) : statsTab(p)}`;
 }
 
-export function skillsTab(p) {
+export function skillsTab(p, parentView = false) {
   const now = GRADE_NOW[p.grade] ?? 1, target = GRADE_TARGET[p.grade] ?? 5;
   const above = aboveGradeCount(p.skills, p.grade);
   return `
@@ -35,9 +36,10 @@ export function skillsTab(p) {
           <div><b>${esc(def.name)}</b>${unlocked ? (isAboveGrade(id, s.level, p.grade) ? ` <span class="above">▲ above grade</span>` : '') : ` <span class="muted tiny">🔒 unlocks when ${esc(SKILLS[def.unlock.skill].name)} hits Lv ${def.unlock.level}</span>`}
             ${unlocked && s.level < MAX_LEVEL ? `<div class="track" style="height:6px;background:var(--ink);margin-top:4px;width:140px"><div style="height:100%;width:${prog * 100}%;background:var(--accent)"></div></div>` : ''}</div>
           <div class="lvl">${Array.from({ length: MAX_LEVEL }, (_, i) => `<i class="${i < s.level ? 'on' : ''} ${i + 1 === target ? 'target' : ''}"></i>`).join('')}</div>
-          <span class="muted">Lv ${s.level}</span></div>`;
+          <span class="muted">Lv ${s.level}${parentView ? ` <button class="ghost tiny" data-action="p-skill" data-kid="${p.id}" data-id="${id}" data-n="-1" title="Easier">−</button><button class="ghost tiny" data-action="p-skill" data-kid="${p.id}" data-id="${id}" data-n="1" title="Harder">+</button>` : ''}</span></div>`;
       }).join('')}
     </div>
+    ${parentView ? `<div class="row" style="margin-top:10px"><button data-action="p-skill-all" data-kid="${p.id}" data-n="1">All skills +1</button><button data-action="p-skill-all" data-kid="${p.id}" data-n="-1">All skills −1</button><span class="muted tiny">Use + / − to set where ${esc(p.name)} works. The game keeps adapting from there.</span></div>` : ''}
     <p class="muted tiny" style="margin-top:10px">Level up a skill by getting 9 of the last 10 right, with the last 5 all correct. Levels go to ${MAX_LEVEL} (grade 6–7 work).</p>`;
 }
 
@@ -77,6 +79,29 @@ export function statsTab(p) {
     </div>`;
 }
 
+function setLevel(app, kidId, skillId, delta) {
+  const p = app.state.profiles[kidId]; const s = p.skills[skillId]; if (!s) return false;
+  const next = Math.max(1, Math.min(MAX_LEVEL, s.level + delta));
+  if (next === s.level) return false;
+  s.level = next; s.window = [];
+  return true;
+}
+
 export const actions = {
   'prog-tab': (app, el) => { app.view.tab = el.dataset.id; app.render(); },
+  'p-skill': (app, el) => {
+    if (!app.parentUnlocked) return;
+    if (setLevel(app, el.dataset.kid, el.dataset.id, Number(el.dataset.n))) {
+      const p = app.state.profiles[el.dataset.kid];
+      p.placed = true;
+      logEvent(p, `Parent set ${SKILLS[el.dataset.id].name} to level ${p.skills[el.dataset.id].level}`);
+      app.save(); app.render();
+    }
+  },
+  'p-skill-all': (app, el) => {
+    if (!app.parentUnlocked) return;
+    const p = app.state.profiles[el.dataset.kid]; const n = Number(el.dataset.n); let changed = 0;
+    for (const id of SKILL_IDS) if (setLevel(app, el.dataset.kid, id, n)) changed++;
+    if (changed) { p.placed = true; logEvent(p, `Parent moved all skills ${n > 0 ? 'up' : 'down'} one level`); app.save(); app.render(); }
+  },
 };
